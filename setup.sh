@@ -3,7 +3,6 @@
 # 检查是否存在 requirements.txt 文件
 if [ -f "requirements.txt" ]; then
   echo "Found requirements.txt. Installing dependencies..."
-  pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
   # 安装 requirements.txt 中的依赖
   pip install -r requirements.txt
   
