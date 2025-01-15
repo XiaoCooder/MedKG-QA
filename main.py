@@ -144,28 +144,28 @@ def CharacterRead(args):
       
 if __name__=="__main__":
     args = parse_args()
-    #创建数据库 （如果第一次安装可能没有数据）
+    #create DB （如果第一次安装可能没有数据）
     sllm.retrieve.get_collection(args.encoder_model,name="qas" ,chroma_dir= args.chroma_dir)
     sllm.retrieve.get_collection(args.encoder_model,name="context" ,chroma_dir= args.chroma_dir)
     sllm.retrieve.get_collection(args.encoder_model,name="summary" ,chroma_dir= args.chroma_dir)
-    #重置数据库 （避免遗留数据）
+    #reset DB （避免遗留数据）
     sllm.retrieve.rebuild_collection(args.encoder_model,name="qas" ,chroma_dir= args.chroma_dir)
     sllm.retrieve.rebuild_collection(args.encoder_model,name="context" ,chroma_dir= args.chroma_dir)
     sllm.retrieve.rebuild_collection(args.encoder_model,name="summary" ,chroma_dir= args.chroma_dir)
-  #载入语言模型的api-key
+    #load api-key
     if not args.key.startswith("sk-"):
         with open(args.key, "r",encoding='utf-8') as f:
             all_keys = f.readlines()
             all_keys = [line.strip('\n') for line in all_keys]
     args.key = all_keys[0]
 
-  #把数据读入到程序中
+    #loda interview data
     InterviewData,InterviewCha = InterviewRead(args)
     Names, Descriptions = CharacterRead(args)
   
-  #执行
+    #process
     InterviewProcess(args,InterviewData,InterviewCha,Names,Descriptions)
   
-  #问答系统
+    #Q&A system
     qa_bot = sllm.user_qa(args)
     qa_bot.start()  
