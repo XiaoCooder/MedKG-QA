@@ -12,8 +12,8 @@
         "content": "[I believe that technology is the reason for these significant changes in civilization. So obviously, you have something like Gutenberg Publishing.]"
      },
      {
-         "role": "user",
-         "content": "So you are one of these dealers, these people who deal the cards. And so."
+        "role": "user",
+        "content": "So you are one of these dealers, these people who deal the cards. And so."
      },
      {
          "role": "assistant",
@@ -27,6 +27,14 @@
          "role": "assistant",
          "content": "{Musk:how is Bill?},{Musk:question2?},{ ...10个"
      }
+     {
+        "role": "user",
+        "content": "Musk:XXXXXXXX\nBill:ZZZZZZZZZ\n 根据这段对话，回答问题：Musk:how is Bill?"
+     },
+    {
+        "role": "assistant",
+        "content": "{Musk:how is Bill?},{Musk:question2?},{ ...10个"
+    }
  ]
 
  
