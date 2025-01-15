@@ -23,9 +23,9 @@ if you are linux or windows:
 ```
 pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
 ```
-```
+
 if you are macos :
-```
+
 ```
 pip3 install torch torchvision torchaudio
 ```
