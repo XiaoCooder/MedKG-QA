@@ -42,7 +42,7 @@ if __name__=="__main__":
     total_num = 0           # 防止卡死
     result = None
     data = []
-    with open('/home/wcy/code/InterviewSystem-v0.1/output/test_data.txt', 'r', encoding='utf-8') as file:
+    with open('/Yourpath/InterviewSystem-v0.1/output/test_data.txt', 'r', encoding='utf-8') as file:
       for line in file:
           data.append(line.strip()) 
    
@@ -73,7 +73,7 @@ if __name__=="__main__":
                             #解析response_qa
                             result = response_q.choices[0].message.content
                             print(result)
-                            with open("/home/wcy/code/InterviewSystem-v0.1/output/test_output.txt", "a", encoding="utf-8") as file:
+                            with open("/Yourpath/InterviewSystem-v0.1/output/test_output.txt", "a", encoding="utf-8") as file:
                                       file.write(result+"\n")
                                       
                             #questions = sllm.align.get_q_parameter(result)
