@@ -2,7 +2,7 @@ import structllm as sllm
 import json
 
 class query_prompt():
-    def __init__(self, args, data, character, names, descriptions):
+    def __init__(self, args, data, character, names=None, descriptions=None):
         self.data = data
         self.args = args
         self.character = character

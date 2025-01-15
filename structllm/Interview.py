@@ -1,8 +1,7 @@
 import re
 import structllm as sllm
-import openai
-from openai import OpenAI
 import json
+import openai
 
 def Interview(args, data, character, names, descriptions):
 
@@ -12,8 +11,7 @@ def Interview(args, data, character, names, descriptions):
     #names :访谈者身份
     #description :访谈者介绍
     llm = sllm.llm.gpt(args)
-    result_data = []
-    result_data, qa_data ,summary_data, context_data = [], [], [],[]
+    result_data, qa_data ,summary_data, context_data = [], [], [], []
 
     for i in range(len(data)):  
        mini_data = data[i]
