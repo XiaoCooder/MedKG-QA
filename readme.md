@@ -1,6 +1,6 @@
 # Interview Process and Q&A System
 
-Program Editor CHENYAN WU
+Edited by CHENYAN WU
 
 ## Setup
 - Clone repository 
