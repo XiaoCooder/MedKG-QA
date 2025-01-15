@@ -9,7 +9,7 @@ class SentenceBertRetriever:
         self.device = "cuda:0" if torch.cuda.is_available() else "cpu"
         print(f"retrieve device:{self.device}")
         self.retrieve_model = SentenceTransformer(
-            r'/home/wcy/code/InterviewSystem-v0.1/stella_en_400M_v5',
+            'stella_en_400M_v5',
             device=self.device,
             trust_remote_code=True
         )

@@ -3,13 +3,7 @@ from tqdm import tqdm
 import argparse
 import os
 import structllm as sllm
-import multiprocessing as mp
-import sys
 from collections import defaultdict
-import asyncio
-from aiomultiprocess import Pool
-import subprocess
-import random
 import re
 def InterviewProcess(args,Data,Cha,Names,Descriptions):
     output_result_path = args.output_result_path
@@ -54,7 +48,7 @@ def InterviewProcess(args,Data,Cha,Names,Descriptions):
                     fresult.flush()
 
 def InterviewRead(args):
-    print('正在读取访谈内容...')
+    print('load Inteview data...')
     with open(args.data_path, "r", encoding="utf8") as fin:
         lines = fin.readlines()
     data = []  # 用来存储说话人的内容
@@ -76,7 +70,7 @@ def InterviewRead(args):
                 character.append(speaker)
             speaker = int(match.group(1))  # 更新当前说话人
             content = ""  # 重置内容
-            print(f"Matched Speaker: {speaker}")
+            #print(f"Matched Speaker: {speaker}")
         else:
             content += line + " "
 
@@ -84,7 +78,7 @@ def InterviewRead(args):
     if speaker is not None:
         data.append(content.strip())
         character.append(speaker)
-    print(len(data))
+    print(f"length of Interview : {len(data)}")
     return data,character
 
 
@@ -142,7 +136,7 @@ def CharacterRead(args):
                 description = match.group(2)  # 提取描述
                 names.append(name)
                 descriptions.append(description)
-    print(len(names)-1)
+    print(f"Number of Speakers : {len(names)-1}")
     return names, descriptions
 
 
@@ -150,9 +144,12 @@ def CharacterRead(args):
       
 if __name__=="__main__":
     args = parse_args()
-    
-    sllm.retrieve.rebuild_collection(args.encoder_model,name="qa" ,chroma_dir= args.chroma_dir)
-    sllm.retrieve.rebuild_collection(args.encoder_model,name="main" ,chroma_dir= args.chroma_dir)
+    #创建数据库 （如果第一次安装可能没有数据）
+    sllm.retrieve.get_collection(args.encoder_model,name="qas" ,chroma_dir= args.chroma_dir)
+    sllm.retrieve.get_collection(args.encoder_model,name="context" ,chroma_dir= args.chroma_dir)
+    sllm.retrieve.get_collection(args.encoder_model,name="summary" ,chroma_dir= args.chroma_dir)
+    #重置数据库 （避免遗留数据）
+    sllm.retrieve.rebuild_collection(args.encoder_model,name="qas" ,chroma_dir= args.chroma_dir)
     sllm.retrieve.rebuild_collection(args.encoder_model,name="context" ,chroma_dir= args.chroma_dir)
     sllm.retrieve.rebuild_collection(args.encoder_model,name="summary" ,chroma_dir= args.chroma_dir)
   #载入语言模型的api-key

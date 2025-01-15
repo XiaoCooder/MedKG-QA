@@ -17,7 +17,7 @@ D = TypeVar("D", bound=Embeddable, contravariant=True)
 
 
 def get_embedding_BERT(text, model="stella_en_400M_v5") -> List[float]:
-    """ 用于对文本进行编码，编码器是xiaobu-embedding-v2的,返回值是float list """
+    """ 用于对文本进行编码，编码器是stella_en_400M_v5的,返回值是float list """
     #print(text)
     retrieve_model = SentenceTransformer(
         model_name_or_path=model,
@@ -87,7 +87,8 @@ class Encoder:
             self.encoder = BERT()
             self.ef = embedding_functions.SentenceTransformerEmbeddingFunction(
                 "stella_en_400M_v5",
-                "cuda:0" if torch.cuda.is_available() else "cpu"
+                "cuda:0" if torch.cuda.is_available() else "cpu",
+                trust_remote_code=True,
             )
         else :pass
 
@@ -153,15 +154,9 @@ def put_embedding_prompt(retriever: str, prompt_data: list = None, collection = 
 #获取collection
 def get_collection(retriever: str, name: str = None ,chroma_dir: str = None):
 
-    dataset_name = "ccks"
-    chroma_path = os.path.join(chroma_dir, retriever, dataset_name)
-
     encoder = Encoder(retriever)
-    if name == None:
-        name = "main"
-    
     embedding_function = encoder.ef
-    chroma_client =  chromadb.AsyncHttpClient(host='127.0.0.1', port=8000)
+    chroma_client =  chromadb.HttpClient(host='127.0.0.1', port=8000)
     Collection =  chroma_client.create_collection(
         name=name,
         metadata={"hnsw:space": "cosine"},
@@ -170,12 +165,12 @@ def get_collection(retriever: str, name: str = None ,chroma_dir: str = None):
     )
     return Collection
 
-#获取qa_collection并存储prompt
-def get_qa_collection_and_write(retriever: str , prompt_data: list = None, name: str = None ,chroma_dir: str = None ):
+#获取qas_collection并存储prompt
+def get_qas_collection_and_write(retriever: str , prompt_data: list = None, name: str = None ,chroma_dir: str = None ):
 #1 起服务
     encoder = Encoder(retriever)
     if name == None:
-        name = "qa"
+        name = "qas"
     
     embedding_function = encoder.ef
     chroma_client = chromadb.HttpClient(host='127.0.0.1', port=8000)
@@ -227,78 +222,11 @@ def get_qa_collection_and_write(retriever: str , prompt_data: list = None, name:
         )
     return None
 
-
-    
-
-
-    #collection = get_collection(retriever, name, chroma_dir)
-#1 起服务
+#获取qas_collection并查询top K
+def get_qas_collection_and_query(retriever: str , name: str = None ,chroma_dir: str = None ,query_texts: str = None ,recall_num : int = None):
     encoder = Encoder(retriever)
     if name == None:
-        name = "main"
-    
-    embedding_function = encoder.ef
-    chroma_client =  chromadb.AsyncHttpClient(host='127.0.0.1', port=8000)
-    collection =  chroma_client.create_collection(
-        name=name,
-        metadata={"hnsw:space": "cosine"},
-        embedding_function=embedding_function,
-        get_or_create=True,
-    )
-#2 拆包
-    if not collection.count():
-        retrieve_data = []
-        with open(dataset_path, 'r',encoding='utf-8' )as f:
-            for idx, line in enumerate(f.readlines()):                        
-                elements = line.strip().split('\t')
-                h, r, t = elements
-                data_relation = {
-                    "question": r,
-                    "type": "relation"
-                }
-                if(data_relation in retrieve_data): continue
-                retrieve_data.append(data_relation)
-        #3 编码
-        encoder_ = encoder.encoder
-        docs = [item["question"] for item in retrieve_data] #question list
-        meta_keys = list(retrieve_data[0].keys())           #data中dict的keys
-        del meta_keys[meta_keys.index("question")] #删除question，只剩下content
-        embeddings = encoder_.encode(docs, batch_size=64, show_progress_bar=True)
-    # else:
-    #     embeddings = encoder_.doc_model.encode(
-    #         docs, batch_size=batch_size, show_progress_bar=True
-    #     )
-        if not isinstance(embeddings, list):
-           embeddings = embeddings.tolist()
-
-        if len(embeddings) > 20000:
-         for i in range(0, len(embeddings), 20000):
-            collection.add(
-                embeddings=embeddings[i : i + 20000],
-                documents=docs[i : i + 20000],
-                metadatas=[
-                    {key: retrieve_data[i][key] for key in meta_keys}
-                    for i in range(i, min(len(embeddings), i + 20000))
-                ],
-                ids=[str(i) for i in range(i, min(len(embeddings), i + 20000))],
-            )
-        else:
-          collection.add(
-              embeddings=embeddings,
-              documents=docs,
-              metadatas=[
-              {key: retrieve_data[i][key] for key in meta_keys} for i in range(len(docs))
-            ],
-            ids=[str(i) for i in range(len(docs))],
-        )
-    #put_embedding_align(retriever=retriever, dataset_path= dataset_path , collection = collection)
-    return None
-
-#获取qa_collection并查询top K
-def get_qa_collection_and_query(retriever: str , name: str = None ,chroma_dir: str = None ,query_texts: str = None ,recall_num : int = None):
-    encoder = Encoder(retriever)
-    if name == None:
-        name = "qa"
+        name = "qas"
     
     embedding_function = encoder.ef
     chroma_client =  chromadb.HttpClient(host='127.0.0.1', port=8000)

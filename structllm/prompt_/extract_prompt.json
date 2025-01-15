@@ -5,7 +5,7 @@
     },
     {
         "role": "user",
-        "content": "I I think technology is the thing that causes these big step changes in civilization.So obviously, you've got things like, say, the gutenberg press before which."
+        "content": "I I think technology is the thing that causes these big step changes in civilization.So obviously, you've got things like, say, the gutenberg press before which.\n"
      },
      {
         "role": "assistant",
@@ -21,10 +21,12 @@
      },
      {
          "role": "user",
-         "content": "First of all, what is the woke mind virus? And if we don't deal with this, nothing else can get done. Tell me why you think that."
+         "content": "Musk:XXXXXXXX\nBill:ZZZZZZZZZ\n"
       },
      {
          "role": "assistant",
-         "content": "[Firstly, what is the woke mind virus? If we don't address this issue, we won't be able to do anything. Tell me why you think so.]"
+         "content": "{Musk:how is Bill?},{Musk:question2?},{ ...10个"
      }
  ]
+
+ 
