@@ -11,8 +11,9 @@ def Interview(args, data, character, names, descriptions):
     #names :访谈者身份
     #description :访谈者介绍
     llm = sllm.llm.gpt(args)
-    result_data, qa_data ,summary_data, context_data = [], [], [], []
-
+    qa_data , cleaned_data = [], []
+    summary_data = None
+    context_data = data
     for i in range(len(data)):  
        mini_data = data[i]
        mini_character = character[i]
@@ -32,8 +33,10 @@ def Interview(args, data, character, names, descriptions):
                 try:
                     result = response.choices[0].message.content
                     result = result.strip('[]')
-                    result_data.append(result)
+                    cleaned_data.append(result)
                     print(names[character[i]-1]+" : "+result)
+                    with open("/home/wcy/code/InterviewSystem-v0.1/output/test_data.txt", "a", encoding="utf-8") as file:
+                         file.write(names[character[i]-1]+":"+result+"\n")
                 except openai.BadRequestError as e: # 非法输入 '$.input' is invalid. query返回结果为：请输入详细信息等
                     print(e)
                     total_num += 1
@@ -57,18 +60,17 @@ def Interview(args, data, character, names, descriptions):
                     print(e)
                     total_num += 1 # 防止卡死
                     continue
-
                 flag = False
-            
+    """    
     flag = True
     while (retry_count < max_retries and flag ) :
         retry_count += 1
         ########2.提取信息#######
-        #提取qa缓存
+        #extract QA pairs
         query_prompt = sllm.query_prompt.query_prompt(args, data, character, names, descriptions)
         query_prompt.create_prompt(task = "qa_extract")
         responses_qa = llm.get_response(query_prompt.naive_prompt)
-        #提取summary缓存
+        #extract summary
         query_prompt.create_prompt(task = "summary_context")
         responses_sum = llm.get_response(query_prompt.naive_prompt)
         
@@ -82,7 +84,7 @@ def Interview(args, data, character, names, descriptions):
                     
                 #解析response_sum
                 result = responses_sum[0].choices[0].message.content 
-                summary_data.append(result)
+                summary_data = result
                 
             except openai.BadRequestError as e: # 非法输入 '$.input' is invalid. query返回结果为：请输入详细信息等
                 print(e)
@@ -114,5 +116,5 @@ def Interview(args, data, character, names, descriptions):
     sllm.retrieve.get_qas_collection_and_write(args.encoder_model , qa_data = qa_data)
     sllm.retrieve.get_summary_collection_and_write(args.encoder_model , summarydata = summary_data)
     sllm.retrieve.get_context_collection_and_write(args.encoder_model , context = context_data)
-
-    return cleand_data, context_data, qa_data, summary_data
+    """
+    return cleaned_data, context_data, qa_data, summary_data

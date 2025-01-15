@@ -4,23 +4,22 @@ import openai
 
 def parse_args():
     parser = argparse.ArgumentParser(add_help=False)
-    
     # setting for openai
-    parser.add_argument('--openai_url', default="", type=str, help='The url of openai')
-    parser.add_argument('--key', default="", type=str, help='The key of openai or path of keys')
-    parser.add_argument('--embedding_key', default="", type=str, help='The key of openai or path of keys')
-    parser.add_argument('--dynamic_open', default=True, type=bool, help='The key of openai or path of keys')
-
+    parser.add_argument('--openai_url', default="https://api.deepseek.com/v1", type=str, help='The url of openai')
+    parser.add_argument('--key', default="sk-bd9f56da3a114296b3de026382a4827c", type=str, help='The key of openai or path of keys')
+    
     # input data path
     parser.add_argument('--folder_path', default="dataset/WikiSQL_TB_csv/test", type=str, help='The CSV data pth.')
     parser.add_argument('--data_path', default="dataset/WikiSQL_CG", type=str, help='The CG data pth.')
     parser.add_argument('--character_path', default="input/character.txt", type=str, help='')
-    parser.add_argument('--prompt_path', default="structllm/prompt_/wikisql.json", type=str, help='The prompt pth.')
-    parser.add_argument('--clean_prompt_path', default="structllm/prompt_/wikisql.json", type=str, help='The prompt pth.')
+    parser.add_argument('--clean_prompt_path', default="structllm/prompt_/clean_prompt.json", type=str, help='The prompt pth.')
+    parser.add_argument('--extract_q_prompt_path', default="structllm/prompt_/extract_q_prompt.json", type=str, help='The prompt pth.')
+    parser.add_argument('--extract_a_prompt_path', default="structllm/prompt_/extract_a_prompt.json", type=str, help='The prompt pth.')
+    parser.add_argument('--summary_prompt_path', default="structllm/prompt_/summary_prompt.json", type=str, help='The prompt pth.')
     parser.add_argument('--batch_size', default="10", type=int, help='The prompt pth.')
     
     # setting model
-    parser.add_argument('--model', default="gpt-3.5-turbo", type=str, help='The openai model. "gpt-3.5-turbo-0125" and "gpt-4-1106-preview" are supported')
+    parser.add_argument('--model', default="deepseek-chat", type=str, help='The openai model. "gpt-3.5-turbo-0125" and "gpt-4-1106-preview" are supported')
     parser.add_argument('--encoder_model', default="SentenceBERT", type=str, help='The openai model. "gpt-3.5-turbo-0125" and "gpt-4-1106-preview" are supported')
     
     # output
@@ -36,66 +35,119 @@ def parse_args():
 
 if __name__=="__main__":
     
-   args = parse_args()
-   llm = sllm.llm.gpt(args)
-   max_retries = 3         # 最大重试次数
-   retry_count = 0         # 当前重试次数
-   total_num = 0           # 防止卡死
-   result = None
-   flag = True
-   data = 
-   result_data, qa_data, context_data = [], [], []
+    args = parse_args()
+    llm = sllm.llm.gpt(args)
+    max_retries = 3         # 最大重试次数
+    retry_count = 0         # 当前重试次数
+    total_num = 0           # 防止卡死
+    result = None
+    data = []
+    with open('/home/wcy/code/InterviewSystem-v0.1/output/test_data.txt', 'r', encoding='utf-8') as file:
+      for line in file:
+          data.append(line.strip()) 
    
-   
-   while (retry_count < max_retries and flag ) :
-        retry_count += 1
-        ########2.提取信息#######
-        #提取qa缓存
-        query_prompt = sllm.query_prompt.query_prompt(args, data, character, names = ["Bill","Musk","Musk"])
-        query_prompt.create_prompt(task = "qa_extract")
-        responses_qa = llm.get_response(query_prompt.naive_prompt)
-        
-        #提取summary缓存
-        query_prompt.create_prompt(task = "summary_context")
-        responses_sum = llm.get_response(query_prompt.naive_prompt)
-        
-        for response_qa in responses_qa:
-            try:
-                #解析response_qa
-                result = response_qa.choices[0].message.content
-                
-                print(result)
-                
-                qa_sub_data = sllm.align.get_qa_parameter(result)
-                for i in range(len(qa_sub_data)):
-                    qa_data.append(qa_sub_data[i])
+    for i in range(len(data) // args.batch_size + (1 if len(data) % args.batch_size != 0 else 0)):
+            start_index = i * args.batch_size
+            end_index = min(start_index + args.batch_size, len(data))  # 确保不超过总长度
+            # 提取一个批次
+            context_data = data[start_index:end_index]
+            print(f"chunk {i}")
+            
+            questions, answers = [], []
+            flag = True
+            
+            while (retry_count < max_retries and flag ) :
+                    retry_count += 1
+                    ########2.提取信息#######
+                    #提取qa缓存
+                    query_prompt = sllm.query_prompt.query_prompt(args, context_data)
+                    query_prompt.create_prompt(task = "extract_q" )
+                    responses_q = llm.get_response(query_prompt.naive_prompt)
                     
-                #解析response_sum
-                result = responses_sum[0].choices[0].message.content 
-                summary_data = result 
-                print(result)
+                    #提取summary缓存
+                    #query_prompt.create_prompt(task = "summary_context")
+                    #responses_sum = llm.get_response(query_prompt.naive_prompt)
+                    
+                    for response_q in responses_q:
+                        try:
+                            #解析response_qa
+                            result = response_q.choices[0].message.content
+                            print(result)
+                            with open("/home/wcy/code/InterviewSystem-v0.1/output/test_output.txt", "a", encoding="utf-8") as file:
+                                      file.write(result+"\n")
+                                      
+                            #questions = sllm.align.get_q_parameter(result)
+                            #for i in range(len(questions)):
+                            #    q.append(questions[i])
+                            
+                            #解析response_sum
+                            #result = responses_sum[0].choices[0].message.content 
+                            #summary_data = result 
+                            #print(result)
+                            
+                        except openai.BadRequestError as e: # 非法输入 '$.input' is invalid. query返回结果为：请输入详细信息等
+                            print(e)
+                            total_num += 1
+                            continue
+
+                        except IndexError as e: # 得不到正确格式的query: set1=(fastest car)
+                            print(e)
+                            total_num += 1 # 防止卡死
+                            continue
+
+                        except openai.APITimeoutError as e: # 超时
+                            print(e)
+                            total_num += 1 # 防止卡死
+                            continue
+
+                        except ValueError as e: # maximum context length
+                            print(e)
+                            continue
+
+                        except Exception as e: # 其他错误
+                            print(e)
+                            total_num += 1 # 防止卡死
+                            continue
+                    flag = False
+                    
+            """
+            while (retry_count < max_retries):
+                   query_prompt = sllm.query_prompt.query_prompt(args, context_data)
+                   for i in range(len(questions)):
+                       query_prompt.create_prompt(task = "extract_a",question = question)
+                       responses_a = llm.get_response(query_prompt.naive_prompt) 
+                   for response_a in responses_a:
+                        try:
+                            #解析response_a
+                            result = response_a.choices[0].message.content
+                            with open("/home/wcy/code/InterviewSystem-v0.1/output/test_output.txt", "a", encoding="utf-8") as file:
+                                      file.write(result+"\n")
+                            answers.append(response_a)
+                            
+                        except openai.BadRequestError as e: # 非法输入 '$.input' is invalid. query返回结果为：请输入详细信息等
+                            print(e)
+                            total_num += 1
+                            continue
+
+                        except IndexError as e: # 得不到正确格式的query: set1=(fastest car)
+                            print(e)
+                            total_num += 1 # 防止卡死
+                            continue
+
+                        except openai.APITimeoutError as e: # 超时
+                            print(e)
+                            total_num += 1 # 防止卡死
+                            continue
+
+                        except ValueError as e: # maximum context length
+                            print(e)
+                            continue
+
+                        except Exception as e: # 其他错误
+                            print(e)
+                            total_num += 1 # 防止卡死
+                            continue
+                    flag = False
+            """
                 
-            except openai.BadRequestError as e: # 非法输入 '$.input' is invalid. query返回结果为：请输入详细信息等
-                print(e)
-                total_num += 1
-                continue
-
-            except IndexError as e: # 得不到正确格式的query: set1=(fastest car)
-                print(e)
-                total_num += 1 # 防止卡死
-                continue
-
-            except openai.APITimeoutError as e: # 超时
-                print(e)
-                total_num += 1 # 防止卡死
-                continue
-
-            except ValueError as e: # maximum context length
-                print(e)
-                continue
-
-            except Exception as e: # 其他错误
-                print(e)
-                total_num += 1 # 防止卡死
-                continue
-    print()
+                

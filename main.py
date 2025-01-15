@@ -7,24 +7,18 @@ from collections import defaultdict
 import re
 def InterviewProcess(args,Data,Cha,Names,Descriptions):
     output_result_path = args.output_result_path
-    print("Start PID %d and save to %s" % (os.getpid(), output_result_path))
-
     with open(output_result_path+".txt", "w",encoding='utf-8') as fresult:
                 # fdetail.write(f"=== Answer:{answer}\n")
                 if not args.debug:
                     try:
-                        for i in range(len(Data) // args.batch_size):
+                        for i in range(len(Data) // args.batch_size + (1 if len(Data) % args.batch_size != 0 else 0)):
                           start_index = i * args.batch_size
-                          end_index = start_index + args.batch_size
+                          end_index = min(start_index + args.batch_size, len(Data))  # 确保不超过总长度
                           # 提取一个批次
                           subData = Data[start_index:end_index]
                           subCha = Cha[start_index:end_index]
+                          print(f"chunk {i}")
                           result = sllm.Interview.Interview(args,subData,subCha,Names,Descriptions)
-                          #sys.stdout = sys.__stdout__  # 恢复标准输出流
-                          #result_dict = dict()
-                          #fresult.write(json.dumps(result_dict, ensure_ascii=False) + "\n")
-                          #fresult.flush()
-
                     except Exception as e:    
                         if args.store_error:
                             #with open(error_path,"a",encoding='utf-8') as f:
@@ -33,13 +27,14 @@ def InterviewProcess(args,Data,Cha,Names,Descriptions):
 
                 else:
                     # sys.stdout = fdetail
-                    for i in range(len(Data) // args.batch_size):
+                    for i in range(len(Data) // args.batch_size + (1 if len(Data) % args.batch_size != 0 else 0)):
                           start_index = i * args.batch_size
-                          end_index = start_index + args.batch_size
+                          end_index = min(start_index + args.batch_size, len(Data))  # 确保不超过总长度
                           # 提取一个批次
                           subData = Data[start_index:end_index]
                           subCha = Cha[start_index:end_index]
-                          result_data = sllm.Interview.Interview(args,subData,subCha,Names,Descriptions)
+                          print(f"chunk {i}")
+                          result = sllm.Interview.Interview(args,subData,subCha,Names,Descriptions)
                           
                     # result = [ list(sample) if type(sample)==set else sample for sample in result ]
                     #print(f"result:{result}, output_result_path:{output_result_path}")
@@ -95,8 +90,11 @@ def parse_args():
     parser.add_argument('--folder_path', default="dataset/WikiSQL_TB_csv/test", type=str, help='The CSV data pth.')
     parser.add_argument('--data_path', default="dataset/WikiSQL_CG", type=str, help='The CG data pth.')
     parser.add_argument('--character_path', default="input/character.txt", type=str, help='')
-    parser.add_argument('--prompt_path', default="structllm/prompt_/wikisql.json", type=str, help='The prompt pth.')
-    parser.add_argument('--clean_prompt_path', default="structllm/prompt_/wikisql.json", type=str, help='The prompt pth.')
+    
+    parser.add_argument('--clean_prompt_path', default="structllm/prompt_/clean_prompt.json", type=str, help='The prompt pth.')
+    parser.add_argument('--extract_q_prompt_path', default="structllm/prompt_/extract_q_prompt.json", type=str, help='The prompt pth.')
+    parser.add_argument('--extract_a_prompt_path', default="structllm/prompt_/extract_a_prompt.json", type=str, help='The prompt pth.')
+    parser.add_argument('--summary_prompt_path', default="structllm/prompt_/summary_prompt.json", type=str, help='The prompt pth.')
     parser.add_argument('--batch_size', default="10", type=int, help='The prompt pth.')
     
     # setting model
