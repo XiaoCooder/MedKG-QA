@@ -2,6 +2,7 @@ import os
 import json
 import torch
 import openai
+import structllm as sllm
 from torch import Tensor
 from openai import OpenAI
 from tqdm.autonotebook import trange
@@ -16,15 +17,14 @@ class user_qa:
     def __init__(self, args):
        self.args = args
     
-    def ask_question():
+    def ask_question(self):
         question = input("please input your question: ")
         #
         if question.lower() in ["exit"]:
-            print("bye！")
+            print("bye!")
             return False
-        
         else:
-            
+            result = sllm.CoT(self.args)
             pass     
         return True
     
@@ -35,4 +35,4 @@ class user_qa:
                if not self.ask_question():
                 break
             return True
-        
+    

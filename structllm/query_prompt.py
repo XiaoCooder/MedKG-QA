@@ -76,8 +76,58 @@ class query_prompt():
          except json.JSONDecodeError as e:
              #print(f"JSON 解码错误: {e}")
              pass
-    
+         
+        elif task == "ask1":
+         try:
+           with open(args.summary_prompt_path,'r',encoding = 'utf-8') as json_file:
+                self.naive_prompt = json.load(json_file)
+                self.naive_prompt.append(
+                         {
+                             "role": "user",
+                             "content": self.add_query_Prompt(self.data,self.character,self.names)
+                         }
+                )
+         except json.JSONDecodeError as e:
+             #print(f"JSON 解码错误: {e}")
+             pass
+        elif task == "ask2":
+         try:
+           with open(args.summary_prompt_path,'r',encoding = 'utf-8') as json_file:
+                self.naive_prompt = json.load(json_file)
+                self.naive_prompt.append(
+                         {
+                             "role": "user",
+                             "content": self.add_query_Prompt(self.data,self.character,self.names)
+                         }
+                )
+         except json.JSONDecodeError as e:
+             #print(f"JSON 解码错误: {e}")
+             pass
+        elif task == "ask3":
+         try:
+           with open(args.summary_prompt_path,'r',encoding = 'utf-8') as json_file:
+                self.naive_prompt = json.load(json_file)
+                self.naive_prompt.append(
+                         {
+                             "role": "user",
+                             "content": self.add_query_Prompt(self.data,self.character,self.names)
+                         }
+                )
+         except json.JSONDecodeError as e:
+             #print(f"JSON 解码错误: {e}")
+             pass
+         
+
     def add_query_Prompt(self, data, character=None , names = None, question=None):
+        if isinstance(data, list):
+            Prompt = "\n".join(data)
+        else:
+            Prompt = data
+        if (question is not None):
+            Prompt = Prompt + "\n Answer the question based on context:" + question
+        return Prompt
+    
+    def add_ask_Prompt(self, data, character=None , names = None, question=None):
         if isinstance(data, list):
             Prompt = "\n".join(data)
         else:

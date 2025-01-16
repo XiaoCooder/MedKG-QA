@@ -90,31 +90,20 @@ def get_target_type(args, response, cgdata):
         label_rel = None
     return top1_api, label_rel
 
-def get_qa_parameter(args, text):
-    list_qa = []
-    #text = "{(Person1:question1,Person2:answer1),(John:How are you?,Alice:I'm fine),(Tom:What time is it?,Mary:It's 3 PM)}"
-    # 使用正则表达式提取每一对问答
-    pattern = r"\(([^:]+:[^,]+),([^:]+:[^,]+)\)"
+def get_parameters(text):
+    names = []
+    questions = []
+
+    # 使用正则表达式分割数据项
+    pattern = r"\{(.*?):(.*?)\}"
+
     matches = re.findall(pattern, text)
 
-    # 初始化两个数组
-    questions = []
-    answers = []
-
-    # 提取每一对问题和答案
+    # 提取姓名和问题
     for match in matches:
-      # 提取问题和答案（通过 `:` 分隔，获取问题和答案的内容）
-        question = match[0].split(":")[1]  # 获取 question 部分（去除人员名称）
-        answer = match[1].split(":")[1]  # 获取 answer 部分（去除人员名称）
-        # 将问题和答案添加到对应的数组中
-        questions.append(question)
-        answers.append(answer)
-
-    # 将问题和答案结合为字典并存入 list_qa
-    list_qa = [{"q": q, "a": a} for q, a in zip(questions, answers)]
-    # 输出最终结果
-    print(list_qa)
-    return list_qa
+       names.append(match[0].strip())  # 姓名
+       questions.append(match[1].strip())  # 问题
+    return names, questions
 
 def update_head_entity(args, head_entity, CG_relations):
     retriever = GetRetriever(args, CG_relations)

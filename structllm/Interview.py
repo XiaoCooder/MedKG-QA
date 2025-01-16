@@ -22,7 +22,7 @@ def Interview(args, data, character, names, descriptions):
        total_num = 0           # 防止卡死
        result = None
        flag = True
-       while (retry_count < max_retries and flag) :
+       while (flag) :
            retry_count += 1
            #读取
            query_prompt = sllm.query_prompt.query_prompt(args, mini_data, mini_character, names, descriptions) #[配置文件 ,谈话内容 ，]
@@ -61,27 +61,23 @@ def Interview(args, data, character, names, descriptions):
                     total_num += 1 # 防止卡死
                     continue
                 flag = False
-    """    
+    
     flag = True
-    while (retry_count < max_retries and flag ) :
-        retry_count += 1
-        ########2.提取信息#######
-        #extract QA pairs
+    while (flag) :
+        ########2.Extract Questions#######
+        #extract Q
         query_prompt = sllm.query_prompt.query_prompt(args, data, character, names, descriptions)
         query_prompt.create_prompt(task = "qa_extract")
-        responses_qa = llm.get_response(query_prompt.naive_prompt)
-        #extract summary
-        query_prompt.create_prompt(task = "summary_context")
-        responses_sum = llm.get_response(query_prompt.naive_prompt)
-        
-        for response_qa in responses_qa:
+        responses_qs = llm.get_response(query_prompt.naive_prompt)
+
+        for response_qs in responses_qs:
             try:
                 #解析response_qa
                 result = response_qa.choices[0].message.content
-                qa_sub_data = sllm.align.get_qa_parameter(result)
-                for i in range(len(qa_sub_data)):
-                    qa_data.append(qa_sub_data[i])
-                    
+                ns,qs = sllm.align.get_parameters(result)
+                #check if parameters size is same
+                assert len(qs)==len(ns)
+                q_data = list(zip(ns, qs))
                 #解析response_sum
                 result = responses_sum[0].choices[0].message.content 
                 summary_data = result
@@ -110,11 +106,107 @@ def Interview(args, data, character, names, descriptions):
                 total_num += 1 # 防止卡死
                 continue
             total_num += 1 # 可得到结果
-            
-            
+    flag = True
+
+
+    while (flag) :
+        ########2.提取信息#######
+        #extract QA pairs
+        query_prompt = sllm.query_prompt.query_prompt(args, data, character, names, descriptions)
+        query_prompt.create_prompt(task = "qa_extract")
+        responses_qa = llm.get_response(query_prompt.naive_prompt)
+        #extract summary
+        query_prompt.create_prompt(task = "summary_context")
+        responses_sum = llm.get_response(query_prompt.naive_prompt)
+        
+        for response_qa in responses_qa:
+            try:
+                #解析response_qa
+                result = response_qa.choices[0].message.content
+                ns,qs = sllm.align.get_parameters(result)
+                #check if parameters size is same
+                assert len(qs)==len(ns)
+                q_data = list(zip(ns, qs))
+                #解析response_sum
+                result = responses_sum[0].choices[0].message.content 
+                summary_data = result
+                
+            except openai.BadRequestError as e: # 非法输入 '$.input' is invalid. query返回结果为：请输入详细信息等
+                print(e)
+                total_num += 1
+                continue
+
+            except IndexError as e: # 得不到正确格式的query: set1=(fastest car)
+                print(e)
+                total_num += 1 # 防止卡死
+                continue
+
+            except openai.APITimeoutError as e: # 超时
+                print(e)
+                total_num += 1 # 防止卡死
+                continue
+
+            except ValueError as e: # maximum context length
+                print(e)
+                continue
+
+            except Exception as e: # 其他错误
+                print(e)
+                total_num += 1 # 防止卡死
+                continue
+            total_num += 1 # 可得到结果       
+    
+    flag = True
+    while (flag) :
+        ########2.提取信息#######
+        #extract QA pairs
+        query_prompt = sllm.query_prompt.query_prompt(args, data, character, names, descriptions)
+        query_prompt.create_prompt(task = "qa_extract")
+        responses_qa = llm.get_response(query_prompt.naive_prompt)
+        #extract summary
+        query_prompt.create_prompt(task = "summary_context")
+        responses_sum = llm.get_response(query_prompt.naive_prompt)
+        
+        for response_qa in responses_qa:
+            try:
+                #解析response_qa
+                result = response_qa.choices[0].message.content
+                ns,qs = sllm.align.get_parameters(result)
+                #check if parameters size is same
+                assert len(qs)==len(ns)
+                q_data = list(zip(ns, qs))
+                #解析response_sum
+                result = responses_sum[0].choices[0].message.content 
+                summary_data = result
+                
+            except openai.BadRequestError as e: # 非法输入 '$.input' is invalid. query返回结果为：请输入详细信息等
+                print(e)
+                total_num += 1
+                continue
+
+            except IndexError as e: # 得不到正确格式的query: set1=(fastest car)
+                print(e)
+                total_num += 1 # 防止卡死
+                continue
+
+            except openai.APITimeoutError as e: # 超时
+                print(e)
+                total_num += 1 # 防止卡死
+                continue
+
+            except ValueError as e: # maximum context length
+                print(e)
+                continue
+
+            except Exception as e: # 其他错误
+                print(e)
+                total_num += 1 # 防止卡死
+                continue
+            total_num += 1 # 可得到结果
+
     ########3.注入数据库#######
     sllm.retrieve.get_qas_collection_and_write(args.encoder_model , qa_data = qa_data)
     sllm.retrieve.get_summary_collection_and_write(args.encoder_model , summarydata = summary_data)
     sllm.retrieve.get_context_collection_and_write(args.encoder_model , context = context_data)
-    """
+    
     return cleaned_data, context_data, qa_data, summary_data

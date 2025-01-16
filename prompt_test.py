@@ -1,6 +1,26 @@
 import structllm as sllm
 import argparse
 import openai
+import re
+
+def getparameter(text):
+    data = "{Chris Anderson:How does Twitter operate?},{Chris Anderson:Tim Evans once said that we are like a monkey with a computer attached to it. What does this mean?},{Chris Anderson:How can we turn the tiny straw of communication bandwidth with the tertiary layer of intelligence into a large highway?},{Chris Anderson:In the best - case scenario, what new human possibilities might we discover?},{Chris Anderson:If AI were to threaten Earth, what would we need?},{Chris Anderson:Last summer, we discussed reusability, and Elon Musk had just demonstrated it spectacularly for the first time. Since then, what has been developed?},{Chris Anderson:What is the holy grail of rocketry or space transport?},{Chris Anderson:With Starship, what is the goal?},{Chris Anderson:What is the main design of Starship?},{Chris Anderson:When will a Starship go to Mars for the first time, presumably without people but with equipment?},{Chris Anderson:When will Starship carry people?},{Chris Anderson:When will Starship transport around 100 people at a time?},{Chris Anderson:What is the expected cost of Starship putting 100 tons into orbit?},{Chris Anderson:What propellants does Starship use?},{Chris Anderson:One of the first tasks on Mars will be to create what?}"
+
+    names = []
+    questions = []
+
+    # 使用正则表达式分割数据项
+    pattern = r"\{(.*?):(.*?)\}"
+
+    matches = re.findall(pattern, text)
+
+    # 提取姓名和问题
+    for match in matches:
+       names.append(match[0].strip())  # 姓名
+       questions.append(match[1].strip())  # 问题
+
+# 输出结果
+    return names, questions
 
 def parse_args():
     parser = argparse.ArgumentParser(add_help=False)
@@ -13,7 +33,7 @@ def parse_args():
     parser.add_argument('--data_path', default="dataset/WikiSQL_CG", type=str, help='The CG data pth.')
     parser.add_argument('--character_path', default="input/character.txt", type=str, help='')
     parser.add_argument('--clean_prompt_path', default="structllm/prompt_/clean_prompt.json", type=str, help='The prompt pth.')
-    parser.add_argument('--extract_q_prompt_path', default="structllm/prompt_/extract_q_prompt.json", type=str, help='The prompt pth.')
+    parser.add_argument('--extract_q_prompt_path', default="structllm/prompt_/query_quest_P.json", type=str, help='The prompt pth.')
     parser.add_argument('--extract_a_prompt_path', default="structllm/prompt_/extract_a_prompt.json", type=str, help='The prompt pth.')
     parser.add_argument('--summary_prompt_path', default="structllm/prompt_/summary_prompt.json", type=str, help='The prompt pth.')
     parser.add_argument('--batch_size', default="10", type=int, help='The prompt pth.')
@@ -42,7 +62,7 @@ if __name__=="__main__":
     total_num = 0           # 防止卡死
     result = None
     data = []
-    with open('/Yourpath/InterviewSystem-v0.1/output/test_data.txt', 'r', encoding='utf-8') as file:
+    with open('/home/wcy/code/InterviewSystem-v0.1/output/test_data.txt', 'r', encoding='utf-8') as file:
       for line in file:
           data.append(line.strip()) 
    
@@ -55,8 +75,9 @@ if __name__=="__main__":
             
             questions, answers = [], []
             flag = True
-            
-            while (retry_count < max_retries and flag ) :
+            max_retries = 3 
+
+            while ( flag ) :
                     retry_count += 1
                     ########2.提取信息#######
                     #提取qa缓存
@@ -72,10 +93,13 @@ if __name__=="__main__":
                         try:
                             #解析response_qa
                             result = response_q.choices[0].message.content
-                            print(result)
-                            with open("/Yourpath/InterviewSystem-v0.1/output/test_output.txt", "a", encoding="utf-8") as file:
+                            #print(result)
+                            with open("/home/wcy/code/InterviewSystem-v0.1/output/test_output.txt", "a", encoding="utf-8") as file:
                                       file.write(result+"\n")
-                                      
+                            names, questions = getparameter(result)
+                            for i in range(len(names)):
+                                 print(names[i]+":"+questions[i])
+                                 
                             #questions = sllm.align.get_q_parameter(result)
                             #for i in range(len(questions)):
                             #    q.append(questions[i])
