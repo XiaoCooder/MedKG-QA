@@ -186,6 +186,6 @@ def Interview(args, data, character, names, descriptions):
     ########3.注入数据库#######
     sllm.retrieve.get_qas_collection_and_write(args.encoder_model , qa_data = qa_data)
     sllm.retrieve.get_summary_collection_and_write(args.encoder_model , summarydata = summary_data)
-    sllm.retrieve.get_context_collection_and_write(args.encoder_model , context = cleaned_data)
+    sllm.retrieve.get_context_collection_and_write(args.encoder_model , context = cleaned_data, chunk)
     
     return cleaned_data, qa_data, summary_data

@@ -95,7 +95,7 @@ def parse_args():
     # setting model
     parser.add_argument('--model', default="gpt-3.5-turbo", type=str, help='The openai model. "gpt-3.5-turbo-0125" and "gpt-4-1106-preview" are supported')
     parser.add_argument('--encoder_model', default="SentenceBERT", type=str, help='The openai model. "gpt-3.5-turbo-0125" and "gpt-4-1106-preview" are supported')
-    
+    parser.add_argument('--retriever_align', default="SentenceBERT", type=str, help='')
     # output
     parser.add_argument('--store_error', action="store_true", default=True)
     parser.add_argument('--error_file_path', default="timeout_file.txt", type=str)
