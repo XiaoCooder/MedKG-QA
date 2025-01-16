@@ -65,7 +65,6 @@ def Interview(args, data, character, names, descriptions):
     flag = True
     while (flag) :
         ########2.Extract Questions#######
-        #extract Q
         query_prompt = sllm.query_prompt.query_prompt(args, data, character, names, descriptions)
         query_prompt.create_prompt(task = "qa_extract")
         responses_qs = llm.get_response(query_prompt.naive_prompt)
@@ -73,14 +72,11 @@ def Interview(args, data, character, names, descriptions):
         for response_qs in responses_qs:
             try:
                 #解析response_qa
-                result = response_qa.choices[0].message.content
+                result = response_qs.choices[0].message.content
                 ns,qs = sllm.align.get_parameters(result)
                 #check if parameters size is same
                 assert len(qs)==len(ns)
                 q_data = list(zip(ns, qs))
-                #解析response_sum
-                result = responses_sum[0].choices[0].message.content 
-                summary_data = result
                 
             except openai.BadRequestError as e: # 非法输入 '$.input' is invalid. query返回结果为：请输入详细信息等
                 print(e)
@@ -109,16 +105,12 @@ def Interview(args, data, character, names, descriptions):
     flag = True
 
 
-    while (flag) :
+    while (flag and q_data is not []) :
         ########2.提取信息#######
         #extract QA pairs
         query_prompt = sllm.query_prompt.query_prompt(args, data, character, names, descriptions)
-        query_prompt.create_prompt(task = "qa_extract")
+        query_prompt.create_prompt(task = "extract_a")
         responses_qa = llm.get_response(query_prompt.naive_prompt)
-        #extract summary
-        query_prompt.create_prompt(task = "summary_context")
-        responses_sum = llm.get_response(query_prompt.naive_prompt)
-        
         for response_qa in responses_qa:
             try:
                 #解析response_qa
