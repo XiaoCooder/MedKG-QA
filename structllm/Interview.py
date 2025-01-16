@@ -33,10 +33,12 @@ def Interview(args, data, character, names, descriptions):
                 try:
                     result = response.choices[0].message.content
                     result = result.strip('[]')
-                    cleaned_data.append(result)
+                    cleaned_data.append(names[character[i]-1]+":"+result+"\n")
+                    """
                     print(names[character[i]-1]+" : "+result)
                     with open("/home/wcy/code/InterviewSystem-v0.1/output/test_data.txt", "a", encoding="utf-8") as file:
                          file.write(names[character[i]-1]+":"+result+"\n")
+                    """
                 except openai.BadRequestError as e: # 非法输入 '$.input' is invalid. query返回结果为：请输入详细信息等
                     print(e)
                     total_num += 1
@@ -65,8 +67,8 @@ def Interview(args, data, character, names, descriptions):
     flag = True
     while (flag) :
         ########2.Extract Questions#######
-        query_prompt = sllm.query_prompt.query_prompt(args, data, character, names, descriptions)
-        query_prompt.create_prompt(task = "qa_extract")
+        query_prompt = sllm.query_prompt.query_prompt(args, cleaned_data)
+        query_prompt.create_prompt(task = "extract_q")
         responses_qs = llm.get_response(query_prompt.naive_prompt)
 
         for response_qs in responses_qs:
@@ -101,76 +103,61 @@ def Interview(args, data, character, names, descriptions):
                 print(e)
                 total_num += 1 # 防止卡死
                 continue
-            total_num += 1 # 可得到结果
-    flag = True
-
-
-    while (flag and q_data is not []) :
-        ########2.提取信息#######
-        #extract QA pairs
-        query_prompt = sllm.query_prompt.query_prompt(args, data, character, names, descriptions)
-        query_prompt.create_prompt(task = "extract_a")
-        responses_qa = llm.get_response(query_prompt.naive_prompt)
-        for response_qa in responses_qa:
-            try:
-                #解析response_qa
-                result = response_qa.choices[0].message.content
-                ns,qs = sllm.align.get_parameters(result)
-                #check if parameters size is same
-                assert len(qs)==len(ns)
-                q_data = list(zip(ns, qs))
-                #解析response_sum
-                result = responses_sum[0].choices[0].message.content 
-                summary_data = result
-                
-            except openai.BadRequestError as e: # 非法输入 '$.input' is invalid. query返回结果为：请输入详细信息等
-                print(e)
-                total_num += 1
-                continue
-
-            except IndexError as e: # 得不到正确格式的query: set1=(fastest car)
-                print(e)
-                total_num += 1 # 防止卡死
-                continue
-
-            except openai.APITimeoutError as e: # 超时
-                print(e)
-                total_num += 1 # 防止卡死
-                continue
-
-            except ValueError as e: # maximum context length
-                print(e)
-                continue
-
-            except Exception as e: # 其他错误
-                print(e)
-                total_num += 1 # 防止卡死
-                continue
-            total_num += 1 # 可得到结果       
+            flag = False
     
-    flag = True
+    ns,qs = zip(*q_data)
+    ans = []
+    for i in range(len(q_data)):
+        question = ns[i]+":"+qs[i]
+        while (flag and question is not None) :
+            ########3.Extract answers#######
+            #extract QA pairs
+            query_prompt = sllm.query_prompt.query_prompt(args, cleaned_data, character)
+            query_prompt.create_prompt(task = "extract_a", question = question)
+            responses_qa = llm.get_response(query_prompt.naive_prompt)
+            for response_qa in responses_qa:
+                try:
+                    #解析response_qa
+                    result = response_qa.choices[0].message.content
+                    ans.append(result)
+                except openai.BadRequestError as e: # 非法输入 '$.input' is invalid. query返回结果为：请输入详细信息等
+                    print(e)
+                    total_num += 1
+                    continue
+
+                except IndexError as e: # 得不到正确格式的query: set1=(fastest car)
+                    print(e)
+                    total_num += 1 # 防止卡死
+                    continue
+
+                except openai.APITimeoutError as e: # 超时
+                    print(e)
+                    total_num += 1 # 防止卡死
+                    continue
+
+                except ValueError as e: # maximum context length
+                    print(e)
+                    continue
+
+                except Exception as e: # 其他错误
+                    print(e)
+                    total_num += 1 # 防止卡死
+                    continue     
+                flag = True
+    
+    qa_data = list(zip(ns,qs,ans))
+    
+    
     while (flag) :
-        ########2.提取信息#######
-        #extract QA pairs
-        query_prompt = sllm.query_prompt.query_prompt(args, data, character, names, descriptions)
-        query_prompt.create_prompt(task = "qa_extract")
-        responses_qa = llm.get_response(query_prompt.naive_prompt)
-        #extract summary
+        ########4.Extract summary#######
+        query_prompt = sllm.query_prompt.query_prompt(args, cleaned_data, character, names, descriptions)
         query_prompt.create_prompt(task = "summary_context")
         responses_sum = llm.get_response(query_prompt.naive_prompt)
-        
-        for response_qa in responses_qa:
+        for response_sum in responses_sum:
             try:
-                #解析response_qa
-                result = response_qa.choices[0].message.content
-                ns,qs = sllm.align.get_parameters(result)
-                #check if parameters size is same
-                assert len(qs)==len(ns)
-                q_data = list(zip(ns, qs))
                 #解析response_sum
-                result = responses_sum[0].choices[0].message.content 
-                summary_data = result
-                
+                summary_data = response_sum[0].choices[0].message.content
+                              
             except openai.BadRequestError as e: # 非法输入 '$.input' is invalid. query返回结果为：请输入详细信息等
                 print(e)
                 total_num += 1
@@ -195,10 +182,10 @@ def Interview(args, data, character, names, descriptions):
                 total_num += 1 # 防止卡死
                 continue
             total_num += 1 # 可得到结果
-
+    
     ########3.注入数据库#######
     sllm.retrieve.get_qas_collection_and_write(args.encoder_model , qa_data = qa_data)
     sllm.retrieve.get_summary_collection_and_write(args.encoder_model , summarydata = summary_data)
-    sllm.retrieve.get_context_collection_and_write(args.encoder_model , context = context_data)
+    sllm.retrieve.get_context_collection_and_write(args.encoder_model , context = cleaned_data)
     
-    return cleaned_data, context_data, qa_data, summary_data
+    return cleaned_data, qa_data, summary_data

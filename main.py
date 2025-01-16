@@ -18,15 +18,12 @@ def InterviewProcess(args,Data,Cha,Names,Descriptions):
                           subData = Data[start_index:end_index]
                           subCha = Cha[start_index:end_index]
                           print(f"chunk {i}")
-                          result = sllm.Interview.Interview(args,subData,subCha,Names,Descriptions)
+                          cleaned_data, qa_data, summary_data = sllm.Interview.Interview(args,subData,subCha,Names,Descriptions)
                     except Exception as e:    
                         if args.store_error:
-                            #with open(error_path,"a",encoding='utf-8') as f:
-                               #f.write(json.dumps(tmp_dict, ensure_ascii=False) + "\n")
                             pass
 
                 else:
-                    # sys.stdout = fdetail
                     for i in range(len(Data) // args.batch_size + (1 if len(Data) % args.batch_size != 0 else 0)):
                           start_index = i * args.batch_size
                           end_index = min(start_index + args.batch_size, len(Data))  # 确保不超过总长度
@@ -34,14 +31,12 @@ def InterviewProcess(args,Data,Cha,Names,Descriptions):
                           subData = Data[start_index:end_index]
                           subCha = Cha[start_index:end_index]
                           print(f"chunk {i}")
-                          result = sllm.Interview.Interview(args,subData,subCha,Names,Descriptions)
+                          cleaned_data, qa_data, summary_data = sllm.Interview.Interview(args,subData,subCha,Names,Descriptions)
                           
-                    # result = [ list(sample) if type(sample)==set else sample for sample in result ]
-                    #print(f"result:{result}, output_result_path:{output_result_path}")
-                    result_dict = dict()
-                    fresult.write(json.dumps(result_dict, ensure_ascii=False) + "\n")
-                    fresult.flush()
-
+                          
+                          
+                          
+                          
 def InterviewRead(args):
     print('load Inteview data...')
     with open(args.data_path, "r", encoding="utf8") as fin:

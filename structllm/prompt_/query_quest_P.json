@@ -13,14 +13,6 @@
    },
    {
       "role": "user",
-      "content": "Chris Anderson:No one since Henry Ford with the Model T has come close to that kind of growth rate.\nElon Musk:For cars."
-   },
-   {
-      "role": "assistant",
-      "content": "{no question}"
-   },
-   {
-      "role": "user",
       "content": "Chris Anderson:What are you seeing behind the scenes that gives you that confidence?\nElon Musk:We are almost at the point of achieving a high-quality unified vector space. Initially, we attempted to do this with image recognition on individual eye images. However, looking at a single image from a video makes it difficult to understand what is happening without ambiguity. Viewing a video segment of a few seconds resolves this ambiguity. The first step is to synchronize all eight cameras so that their frames are examined and labeled simultaneously by one person, as human labeling is still necessary. This ensures consistency in labeling, avoiding discrepancies caused by different people labeling at different times. The process involves creating a surround picture. Adding the time dimension is crucial, allowing the examination and labeling of surround video, which is challenging from a software perspective. We developed our own labeling tools and created order labeling software to enhance the efficiency of human labor. Initially, labeling a 10-second video clip took several hours, which is not scalable. The solution involves primarily automatic labeling of surround video, with humans acting as editors making minor corrections. These corrections are then fed back to improve future labeling. The goal is to enable the order laborer to process vast amounts of video with high accuracy, automatically labeling elements such as cars, lane lines, and drive space."
    },
    {
@@ -34,13 +26,5 @@
    {
       "role": "assistant",
       "content": "{Chris Anderson:For the past five years, it has been claimed that the technology would mature within one or two years, but this has not happened. What is the reason behind this? },{Chris Anderson:What are the specific significant behind - the - scenes improvements brought about by the new architecture?},{Chris Anderson:Although it is claimed that by the end of this year, cars will be able to drive autonomously in most cities and situations and be safer than human driving, this is not the case for all situations. So, in which situations can cars still not achieve autonomous driving or cannot guarantee to be safer than human driving?},{Chris Anderson:Elon Musk said that cars can drive autonomously most of the time in Austin currently. What are the specific driving scenarios and limiting conditions? },{Chris Anderson:For the full self - driving beta program participated by over 100,000 people, what is the specific composition of the participants and what is their driving feedback? }"
-   },
-   {
-      "role": "user",
-      "content": "Chris Anderson:Take a cup of tea to grandma and show her family pictures.\nElon Musk:To take care of my grandmother and ensure her well-being."
-   },
-   {
-      "role": "assistant",
-      "content": "{No question}"
    }
 ]

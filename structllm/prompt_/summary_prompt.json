@@ -1,30 +1,6 @@
 [
     {
-       "role": "system",
-       "content": "You are a question and answer extraction robot. Here is a character interview where you will extract as many question and answer pairs as possible and output them in a fixed format. The output format is: {(Person1:question1,Person2:answer1),(Person1:question2,Person2:answer2),(Person3:question,Person2:answer3)}"
-    },
-    {
-        "role": "user",
-        "content": "I I think technology is the thing that causes these big step changes in civilization.So obviously, you've got things like, say, the gutenberg press before which."
-     },
-     {
-        "role": "assistant",
-        "content": "[I believe that technology is the reason for these significant changes in civilization. So obviously, you have something like Gutenberg Publishing.]"
-     },
-     {
-         "role": "user",
-         "content": "So you are one of these dealers, these people who deal the cards. And so."
-     },
-     {
-         "role": "assistant",
-         "content": "[So you are one of these dealers, these card sellers.]"
-     },
-     {
-         "role": "user",
-         "content": "First of all, what is the woke mind virus? And if we don't deal with this, nothing else can get done. Tell me why you think that."
-      },
-     {
-         "role": "assistant",
-         "content": "[Firstly, what is the woke mind virus? If we don't address this issue, we won't be able to do anything. Tell me why you think so.]"
-     }
- ]
+        "role": "system",
+        "content": "You are a summarization assistant. Condense the content I provide into its main idea, and express it in no more than three sentences."
+    }
+]

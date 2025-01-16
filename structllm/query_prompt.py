@@ -70,7 +70,7 @@ class query_prompt():
                 self.naive_prompt.append(
                          {
                              "role": "user",
-                             "content": self.add_query_Prompt(self.data,self.character,self.names)
+                             "content": self.add_query_Prompt(self.data)
                          }
                 )
          except json.JSONDecodeError as e:
@@ -128,12 +128,7 @@ class query_prompt():
         return Prompt
     
     def add_ask_Prompt(self, data, character=None , names = None, question=None):
-        if isinstance(data, list):
-            Prompt = "\n".join(data)
-        else:
-            Prompt = data
-        if (question is not None):
-            Prompt = Prompt + "\n Answer the question based on context:" + question
+        Prompt = data
         return Prompt
     
    

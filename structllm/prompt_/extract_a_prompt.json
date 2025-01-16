@@ -1,40 +1,6 @@
 [
-    {
+   {
        "role": "system",
-       "content": "Now you are a text processing assistant, and your task is to rewrite the conversation content.\n You need to remove unnecessary and colloquial words from the text and adjust the sentence structure to declarative sentences. \nAttention: The original meaning of the sentence cannot be changed, and the sentence cannot be continued. \nThe output format is: the processed sentence should be wrapped in [ and ]."
-    },
-    {
-        "role": "user",
-        "content": "I I think technology is the thing that causes these big step changes in civilization.So obviously, you've got things like, say, the gutenberg press before which.\n"
-     },
-     {
-        "role": "assistant",
-        "content": "[I believe that technology is the reason for these significant changes in civilization. So obviously, you have something like Gutenberg Publishing.]"
-     },
-     {
-        "role": "user",
-        "content": "So you are one of these dealers, these people who deal the cards. And so."
-     },
-     {
-         "role": "assistant",
-         "content": "[So you are one of these dealers, these card sellers.]"
-     },
-     {
-         "role": "user",
-         "content": "Musk:XXXXXXXX\nBill:ZZZZZZZZZ\n"
-      },
-     {
-         "role": "assistant",
-         "content": "{Musk:how is Bill?},{Musk:question2?},{ ...10个"
-     }
-     {
-        "role": "user",
-        "content": "Musk:XXXXXXXX\nBill:ZZZZZZZZZ\n 根据这段对话，回答问题：Musk:how is Bill?"
-     },
-    {
-        "role": "assistant",
-        "content": "{Musk:how is Bill?},{Musk:question2?},{ ...10个"
-    }
- ]
-
- 
+       "content": "you are a question answer assistant,I will give you question and content,you should find answer from the content, just use one sentence to tell me the answer"
+   }
+]
