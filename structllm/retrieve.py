@@ -273,7 +273,7 @@ def rebuild_collection(retriever: str , name: str = None ,chroma_dir: str = None
     return collection
 
 #获取context_collection并查询top K
-def get_context_collection_and_query(retriever: str , name: str = None ,chroma_dir: str = None ,query_texts: str = None ,recall_num : int = None):
+def get_context_collection_and_query(retriever: str, name: str = None, chroma_dir: str = None, query_texts: str = None, recall_num : int = None):
     
     encoder = Encoder(retriever)
     if name == None:
@@ -291,7 +291,7 @@ def get_context_collection_and_query(retriever: str , name: str = None ,chroma_d
     return results_relation
 
 #获取summary_collection并查询top K
-def get_summary_collection_and_query(retriever: str , name: str = None ,chroma_dir: str = None ,query_texts: str = None ,recall_num : int = None):
+def get_summary_collection_and_query(retriever: str, name: str = None, chroma_dir: str = None, query_texts: str = None, recall_num : int = None):
     
     encoder = Encoder(retriever)
     if name == None:
@@ -309,7 +309,7 @@ def get_summary_collection_and_query(retriever: str , name: str = None ,chroma_d
     return results_relation
 
 #获取qa_collection并存储prompt
-def get_context_collection_and_write(retriever: str , prompt_data: list = None, name: str = None ,chroma_dir: str = None, chunk = None):
+def get_context_collection_and_write(retriever: str, prompt_data: list = None, name: str = None, chroma_dir: str = None, chunk = None):
 #1 起服务
     encoder = Encoder(retriever)
     if name == None:
@@ -366,7 +366,7 @@ def get_context_collection_and_write(retriever: str , prompt_data: list = None, 
     return None
 
 #获取qa_collection并存储prompt
-def get_summary_collection_and_write(retriever: str , prompt_data: list = None, name: str = None ,chroma_dir: str = None, chunk = None):
+def get_summary_collection_and_write(retriever: str, prompt_data: list = None, name: str = None, chroma_dir: str = None, chunk = None):
 #1 起服务
     encoder = Encoder(retriever)
     if name == None:
