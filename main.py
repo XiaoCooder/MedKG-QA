@@ -5,6 +5,13 @@ import os
 import structllm as sllm
 from collections import defaultdict
 import re
+
+
+def check_path(path):
+    d = os.path.dirname(path)
+    if not os.path.exists(d):
+        os.makedirs(d)
+
 def InterviewProcess(args,Data,Cha,Names,Descriptions):
     output_result_path = args.output_result_path
     with open(output_result_path+".txt", "w",encoding='utf-8') as fresult:
@@ -17,7 +24,7 @@ def InterviewProcess(args,Data,Cha,Names,Descriptions):
                           # 提取一个批次
                           subData = Data[start_index:end_index]
                           subCha = Cha[start_index:end_index]
-                          print(f"chunk {i}")
+                          print(f"*************chunk {i}*************\n")
                           cleaned_data, qa_data, summary_data = sllm.Interview.Interview(args,subData,subCha,Names,Descriptions)
                     except Exception as e:    
                         if args.store_error:
@@ -27,21 +34,23 @@ def InterviewProcess(args,Data,Cha,Names,Descriptions):
                     cleaned_path = os.path.join(args.output_path, 'cleaned_text.txt')
                     qa_path = os.path.join(args.output_path, 'qa_pairs.txt')
                     summary_path = os.path.join(args.output_path, 'summary.txt')
-                    for i in range(len(Data) // args.batch_size + (1 if len(Data) % args.batch_size != 0 else 0)):
+                    check_path(cleaned_path)
+                    num_batches = len(Data) // args.batch_size + (1 if len(Data) % args.batch_size != 0 else 0)
+                    for i in tqdm(range(num_batches), desc="Processing batches"):
                           start_index = i * args.batch_size
                           end_index = min(start_index + args.batch_size, len(Data))  # 确保不超过总长度
                           # 提取一个批次
                           subData = Data[start_index:end_index]
                           subCha = Cha[start_index:end_index]
-                          print(f"chunk {i}")
+                          #print(f"chunk {i}")
                           cleaned_data, qa_data, summary_data = sllm.Interview.Interview(args,subData,subCha,Names,Descriptions,i)
                           #save chunk
                           with open(cleaned_path, 'a') as fout:
-                                 fout.write(f"chunk {i}")
+                                 fout.write(f"*************chunk {i}*************\n")
                           with open(qa_path, 'a') as fout:
-                                 fout.write(f"chunk {i}")
+                                 fout.write(f"*************chunk {i}*************\n")
                           with open(summary_path, 'a') as fout:
-                                 fout.write(f"chunk {i}")
+                                 fout.write(f"*************chunk {i}*************\n")
 
                           for i in range(len(cleaned_data)):
                             with open(cleaned_path, 'a') as fout:
@@ -49,9 +58,9 @@ def InterviewProcess(args,Data,Cha,Names,Descriptions):
                           for idx,element in enumerate(qa_data):
                             n,q,a = element
                             with open(qa_path, 'a') as fout:
-                                 fout.write(f"{idx}"+" "+n+":"+q+" answer:"+a)
+                                 fout.write(f"Question {idx}"+" "+n+":"+q+" Answer:"+a+"\n")
                           with open(summary_path, 'a') as fout:
-                                 fout.write(summary_data)
+                                 fout.write(summary_data+"\n")
 
                         
                           

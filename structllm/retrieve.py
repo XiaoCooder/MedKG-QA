@@ -368,7 +368,7 @@ def get_context_collection_and_write(retriever: str, context_data: list = None, 
     return None
 
 #获取qa_collection并存储prompt
-def get_summary_collection_and_write(retriever: str, summary_data, name: str = None, chroma_dir: str = None, chunk_id = None):
+def get_summary_collection_and_write(retriever: str, summarydata, name: str = None, chroma_dir: str = None, chunk_id = None):
 #1 起服务
     encoder = Encoder(retriever)
     if name == None:
@@ -385,7 +385,7 @@ def get_summary_collection_and_write(retriever: str, summary_data, name: str = N
 #2 拆包
     retrieve_data = []
     data_prompt = {
-        "summary": summary_data,
+        "summary": summarydata,
         "chunk_id": chunk_id
     }
     retrieve_data.append(data_prompt)

@@ -29,6 +29,7 @@ def Interview(args, data, character, names, descriptions, chunk_id):
            ########1.清洗文本#######
            query_prompt.create_prompt(task = "clean")
            responses = llm.get_response(query_prompt.naive_prompt)
+           
            for response in responses:
                 try:
                     result = response.choices[0].message.content
@@ -63,8 +64,8 @@ def Interview(args, data, character, names, descriptions, chunk_id):
                     total_num += 1 # 防止卡死
                     continue
                 flag = False
-    
     flag = True
+    ns ,qs =[], []
     while (flag) :
         ########2.Extract Questions#######
         query_prompt = sllm.query_prompt.query_prompt(args, cleaned_data)
@@ -77,9 +78,6 @@ def Interview(args, data, character, names, descriptions, chunk_id):
                 result = response_qs.choices[0].message.content
                 ns,qs = sllm.align.get_parameters(result)
                 #check if parameters size is same
-                assert len(qs)==len(ns)
-                q_data = list(zip(ns, qs))
-                
             except openai.BadRequestError as e: # 非法输入 '$.input' is invalid. query返回结果为：请输入详细信息等
                 print(e)
                 total_num += 1
@@ -104,12 +102,12 @@ def Interview(args, data, character, names, descriptions, chunk_id):
                 total_num += 1 # 防止卡死
                 continue
             flag = False
-    
-    ns,qs = zip(*q_data)
     ans = []
-    for i in range(len(q_data)):
-        question = ns[i]+":"+qs[i]
-        while (flag and question is not None) :
+    for n ,q in zip(ns,qs):
+        question = n+":"+q
+        #import pdb; pdb.set_trace()
+        flag = True
+        while (flag) :
             ########3.Extract answers#######
             #extract QA pairs
             query_prompt = sllm.query_prompt.query_prompt(args, cleaned_data, character)
@@ -151,13 +149,13 @@ def Interview(args, data, character, names, descriptions, chunk_id):
     while (flag) :
         ########4.Extract summary#######
         query_prompt = sllm.query_prompt.query_prompt(args, cleaned_data, character, names, descriptions)
-        query_prompt.create_prompt(task = "summary_context")
+        query_prompt.create_prompt(task = "summary")
         responses_sum = llm.get_response(query_prompt.naive_prompt)
         for response_sum in responses_sum:
             try:
                 #解析response_sum
-                summary_data = response_sum[0].choices[0].message.content
-                              
+                summary_data = response_sum.choices[0].message.content
+                             
             except openai.BadRequestError as e: # 非法输入 '$.input' is invalid. query返回结果为：请输入详细信息等
                 print(e)
                 total_num += 1
@@ -183,10 +181,10 @@ def Interview(args, data, character, names, descriptions, chunk_id):
                 continue
             flag = False
 
-    import pdb; pdb.set_trace()
+    #import pdb; pdb.set_trace()
     ########3.注入数据库#######
     sllm.retrieve.get_qas_collection_and_write(args.encoder_model , qa_data = qa_data, chunk_id = chunk_id)
     sllm.retrieve.get_summary_collection_and_write(args.encoder_model , summarydata = summary_data, chunk_id = chunk_id)
-    sllm.retrieve.get_context_collection_and_write(args.encoder_model , context = cleaned_data, chunk_id = chunk_id)
+    sllm.retrieve.get_context_collection_and_write(args.encoder_model , context_data = cleaned_data, chunk_id = chunk_id)
     
     return cleaned_data, qa_data, summary_data

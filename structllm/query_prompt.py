@@ -27,7 +27,7 @@ class query_prompt():
                 self.naive_prompt.append(
                          {
                              "role": "user",
-                             "content": self.add_query_Prompt(self.data,self.character,self.names)
+                             "content": self.add_query_Prompt(self.data)
                          }
                 )
          except json.JSONDecodeError as e:
@@ -49,7 +49,6 @@ class query_prompt():
              pass
          
         elif task == "extract_a":
-         assert question is not None
          try:
            with open(args.extract_a_prompt_path,'r',encoding = 'utf-8') as json_file:
                 self.naive_prompt = json.load(json_file)
@@ -123,8 +122,8 @@ class query_prompt():
             Prompt = "\n".join(data)
         else:
             Prompt = data
-        if (question is not None):
-            Prompt = Prompt + "\n Answer the question based on context:" + question
+        if (question):
+            Prompt = Prompt + "Find the question in the context and answer the question based on its next sentence , just output the final answer:" + question
         return Prompt
     
     def add_ask_Prompt(self, data, character=None , names = None, question=None):
