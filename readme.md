@@ -48,7 +48,7 @@ bash run.sh
 This project is intended for non-commercial use
 If you want to use it for commercial use, please contact wuchenyan0823@gmail.com
 ```
-## Technical Report (Technical part of the report)
+## Technical Report (The Approach section of the report)
 
 ### Work Introduction
 
