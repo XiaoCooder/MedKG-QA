@@ -2,7 +2,7 @@ import os
 import chromadb
 import torch
 from torch import Tensor
-
+from transformers import logging
 from tqdm.autonotebook import trange
 from typing import List, Union, TypeVar, Dict
 from chromadb.utils import embedding_functions
@@ -10,20 +10,33 @@ from chromadb.api.types import Documents, EmbeddingFunction, Embeddings, Images
 from sentence_transformers import SentenceTransformer
 from chromadb.api.models.Collection import Collection
 from chromadbx import NanoIDGenerator
-
+logging.set_verbosity_error()
 Embeddable = Union[Documents, Images]
 D = TypeVar("D", bound=Embeddable, contravariant=True)
+model = None
 
-
+def get_model(model_name):
+    global model
+    if model is None:
+        model = SentenceTransformer(
+            model_name_or_path = model_name,
+            device="cuda:0" if torch.cuda.is_available() else "cpu",
+            trust_remote_code=True
+        )
+    return model
 
 def get_embedding_BERT(text, model="stella_en_400M_v5") -> List[float]:
     """ 用于对文本进行编码，编码器是stella_en_400M_v5的,返回值是float list """
-    #print(text)
+    """
+    global retrieve_model
     retrieve_model = SentenceTransformer(
         model_name_or_path=model,
         device = "cuda:0" if torch.cuda.is_available() else "cpu",
         trust_remote_code=True,
     )
+    """
+    retrieve_model = get_model(model)
+    
     if isinstance(text, str):
         result = retrieve_model.encode([text])
         flat_array = result.tolist()
@@ -87,7 +100,7 @@ class Encoder:
             self.encoder = BERT()
             self.ef = embedding_functions.SentenceTransformerEmbeddingFunction(
                 "stella_en_400M_v5",
-                "cuda:0" if torch.cuda.is_available() else "cpu",
+                self.device,
                 trust_remote_code=True,
             )
         else :pass
@@ -185,7 +198,6 @@ def get_qas_collection_and_write(retriever: str , qa_data: list = None, name: st
 
     for idx , elements in enumerate(qa_data):
         n,q,ans = elements
-        print(n,q,ans)
         data_prompt = {
                     "name": n,
                     "question": q,
