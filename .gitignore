@@ -1,2 +1,5 @@
 stella_en_400M_v5/
 chroma.log
+output/
+chromadb/SentenceBERT/interview/
+input/
