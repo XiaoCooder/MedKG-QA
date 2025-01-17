@@ -143,11 +143,11 @@ def Interview(args, data, character, names, descriptions, chunk_id):
                     print(e)
                     total_num += 1 # 防止卡死
                     continue     
-                flag = True
+                flag = False
     
     qa_data = list(zip(ns,qs,ans))
     
-    
+    flag = True
     while (flag) :
         ########4.Extract summary#######
         query_prompt = sllm.query_prompt.query_prompt(args, cleaned_data, character, names, descriptions)
@@ -181,8 +181,9 @@ def Interview(args, data, character, names, descriptions, chunk_id):
                 print(e)
                 total_num += 1 # 防止卡死
                 continue
-            total_num += 1 # 可得到结果
-    
+            flag = False
+
+    import pdb; pdb.set_trace()
     ########3.注入数据库#######
     sllm.retrieve.get_qas_collection_and_write(args.encoder_model , qa_data = qa_data, chunk_id = chunk_id)
     sllm.retrieve.get_summary_collection_and_write(args.encoder_model , summarydata = summary_data, chunk_id = chunk_id)

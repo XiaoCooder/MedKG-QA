@@ -183,11 +183,14 @@ def get_qas_collection_and_write(retriever: str , qa_data: list = None, name: st
 #2 拆包
     retrieve_data = []
 
-    for idx , elements in enumerate(prompt_data):
-        k,v = elements[0],elements[1]
+    for idx , elements in enumerate(qa_data):
+        n,q,ans = elements
+        print(n,q,ans)
         data_prompt = {
-                    "question": k,
-                    "content": v
+                    "name": n,
+                    "question": q,
+                    "answer": ans,
+                    "chunk_id":chunk_id
         }
         if(data_prompt in retrieve_data): continue
         retrieve_data.append(data_prompt)
@@ -195,7 +198,7 @@ def get_qas_collection_and_write(retriever: str , qa_data: list = None, name: st
     encoder_ = encoder.encoder
     docs = [item["question"] for item in retrieve_data] #question list
     meta_keys = list(retrieve_data[0].keys())           #data中dict的keys
-    del meta_keys[meta_keys.index("question")] #删除question，只剩下content
+    #del meta_keys[meta_keys.index("question")] #删除question，只剩下content
     embeddings = encoder_.encode(docs, batch_size=64, show_progress_bar=True)
     if not isinstance(embeddings, list):
         embeddings = embeddings.tolist()
@@ -236,8 +239,8 @@ def get_qas_collection_and_query(retriever: str , name: str = None ,chroma_dir: 
         embedding_function=embedding_function,
         get_or_create=True,
     )
-    results_prompt = collection.query(query_texts=query_texts , n_results = recall_num)
-    return results_prompt
+    results_qas = collection.query(query_texts=query_texts , n_results = recall_num)
+    return results_qas
 
 #数据库记录数量
 def chroma_count(retriever: str , name: str = None ,chroma_dir: str = None):
@@ -287,8 +290,8 @@ def get_context_collection_and_query(retriever: str, name: str = None, chroma_di
         embedding_function=embedding_function,
         get_or_create=True,
     )
-    results_relation = collection.query(query_texts = query_texts, n_results = recall_num)
-    return results_relation
+    results_context = collection.query(query_texts = query_texts, n_results = recall_num)
+    return results_context
 
 #获取summary_collection并查询top K
 def get_summary_collection_and_query(retriever: str, name: str = None, chroma_dir: str = None, query_texts: str = None, recall_num : int = None):
@@ -305,11 +308,11 @@ def get_summary_collection_and_query(retriever: str, name: str = None, chroma_di
         embedding_function=embedding_function,
         get_or_create=True,
     )
-    results_relation = collection.query(query_texts = query_texts, n_results = recall_num)
-    return results_relation
+    results_summary = collection.query(query_texts = query_texts, n_results = recall_num)
+    return results_summary
 
 #获取qa_collection并存储prompt
-def get_context_collection_and_write(retriever: str, prompt_data: list = None, name: str = None, chroma_dir: str = None, chunk_id = None):
+def get_context_collection_and_write(retriever: str, context_data: list = None, name: str = None, chroma_dir: str = None, chunk_id = None):
 #1 起服务
     encoder = Encoder(retriever)
     if name == None:
@@ -326,19 +329,18 @@ def get_context_collection_and_write(retriever: str, prompt_data: list = None, n
 #2 拆包
     retrieve_data = []
 
-    for idx , elements in enumerate(prompt_data):
-        k,v = elements[0],elements[1]
-        data_prompt = {
-                    "question": k,
-                    "content": v
+    for i in range(len(context_data)):
+        data = {
+                    "context": context_data[i],
+                    "chunk_id": chunk_id
         }
-        if(data_prompt in retrieve_data): continue
-        retrieve_data.append(data_prompt)
+        if(data in retrieve_data): continue
+        retrieve_data.append(data)
 #3 编码，存储
     encoder_ = encoder.encoder
-    docs = [item["question"] for item in retrieve_data] #question list
+    docs = [item["context"] for item in retrieve_data] #question list
     meta_keys = list(retrieve_data[0].keys())           #data中dict的keys
-    del meta_keys[meta_keys.index("question")] #删除question，只剩下content
+    #del meta_keys[meta_keys.index("")] #删除question，只剩下content
     embeddings = encoder_.encode(docs, batch_size=64, show_progress_bar=True)
     if not isinstance(embeddings, list):
         embeddings = embeddings.tolist()
@@ -382,19 +384,16 @@ def get_summary_collection_and_write(retriever: str, summary_data, name: str = N
     )
 #2 拆包
     retrieve_data = []
-
-    for idx , elements in enumerate(summary_data):
-        k,v = elements[0],elements[1]
-        data_prompt = {
-                    "summary": k
-        }
-        if(data_prompt in retrieve_data): continue
-        retrieve_data.append(data_prompt)
+    data_prompt = {
+        "summary": summary_data,
+        "chunk_id": chunk_id
+    }
+    retrieve_data.append(data_prompt)
 #3 编码，存储
     encoder_ = encoder.encoder
-    docs = [item["question"] for item in retrieve_data] #question list
+    docs = [item["summary"] for item in retrieve_data] #question list
     meta_keys = list(retrieve_data[0].keys())           #data中dict的keys
-    del meta_keys[meta_keys.index("question")] #删除question，只剩下content
+    #del meta_keys[meta_keys.index("question")] #删除question，只剩下content
     embeddings = encoder_.encode(docs, batch_size=64, show_progress_bar=True)
     if not isinstance(embeddings, list):
         embeddings = embeddings.tolist()

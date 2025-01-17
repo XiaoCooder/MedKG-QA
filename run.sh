@@ -1,7 +1,7 @@
 OUTPUTPATH=output
 mkdir -p $OUTPUTPATH
 dt=`date '+%Y%m%d_%H%M%S'`
-task_name= "processed_Interview"
+task_name=processed_Interview
 GPU=0
 args=$@
 

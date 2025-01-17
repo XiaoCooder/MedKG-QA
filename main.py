@@ -24,9 +24,9 @@ def InterviewProcess(args,Data,Cha,Names,Descriptions):
                             pass
 
                 else:
-                    cleaned_path = os.path.join(args.save_dir, 'cleaned_text.txt')
-                    qa_path = os.path.join(args.save_dir, 'qa_pairs.txt')
-                    summary_path = os.path.join(args.save_dir, 'summary.path')
+                    cleaned_path = os.path.join(args.output_path, 'cleaned_text.txt')
+                    qa_path = os.path.join(args.output_path, 'qa_pairs.txt')
+                    summary_path = os.path.join(args.output_path, 'summary.txt')
                     for i in range(len(Data) // args.batch_size + (1 if len(Data) % args.batch_size != 0 else 0)):
                           start_index = i * args.batch_size
                           end_index = min(start_index + args.batch_size, len(Data))  # 确保不超过总长度
@@ -34,7 +34,7 @@ def InterviewProcess(args,Data,Cha,Names,Descriptions):
                           subData = Data[start_index:end_index]
                           subCha = Cha[start_index:end_index]
                           print(f"chunk {i}")
-                          cleaned_data, qa_data, summary_data = sllm.Interview.Interview(args,subData,subCha,Names,Descriptions)
+                          cleaned_data, qa_data, summary_data = sllm.Interview.Interview(args,subData,subCha,Names,Descriptions,i)
                           #save chunk
                           with open(cleaned_path, 'a') as fout:
                                  fout.write(f"chunk {i}")
@@ -44,13 +44,16 @@ def InterviewProcess(args,Data,Cha,Names,Descriptions):
                                  fout.write(f"chunk {i}")
 
                           for i in range(len(cleaned_data)):
-                             with open(cleaned_path, 'a') as fout:
+                            with open(cleaned_path, 'a') as fout:
                                  fout.write(cleaned_data[i])
-                          #for i in range(len(qa_data)):
-                          #   with open(cleaned_path, 'a') as fout:
-                          #       fout.write(qa_data[i])
+                          for idx,element in enumerate(qa_data):
+                            n,q,a = element
+                            with open(qa_path, 'a') as fout:
+                                 fout.write(f"{idx}"+" "+n+":"+q+" answer:"+a)
                           with open(summary_path, 'a') as fout:
                                  fout.write(summary_data)
+
+                        
                           
                           
                           
