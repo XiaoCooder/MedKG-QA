@@ -24,6 +24,9 @@ def InterviewProcess(args,Data,Cha,Names,Descriptions):
                             pass
 
                 else:
+                    cleaned_path = os.path.join(args.save_dir, 'cleaned_text.txt')
+                    qa_path = os.path.join(args.save_dir, 'qa_pairs.txt')
+                    summary_path = os.path.join(args.save_dir, 'summary.path')
                     for i in range(len(Data) // args.batch_size + (1 if len(Data) % args.batch_size != 0 else 0)):
                           start_index = i * args.batch_size
                           end_index = min(start_index + args.batch_size, len(Data))  # 确保不超过总长度
@@ -32,7 +35,22 @@ def InterviewProcess(args,Data,Cha,Names,Descriptions):
                           subCha = Cha[start_index:end_index]
                           print(f"chunk {i}")
                           cleaned_data, qa_data, summary_data = sllm.Interview.Interview(args,subData,subCha,Names,Descriptions)
-                          
+                          #save chunk
+                          with open(cleaned_path, 'a') as fout:
+                                 fout.write(f"chunk {i}")
+                          with open(qa_path, 'a') as fout:
+                                 fout.write(f"chunk {i}")
+                          with open(summary_path, 'a') as fout:
+                                 fout.write(f"chunk {i}")
+
+                          for i in range(len(cleaned_data)):
+                             with open(cleaned_path, 'a') as fout:
+                                 fout.write(cleaned_data[i])
+                          #for i in range(len(qa_data)):
+                          #   with open(cleaned_path, 'a') as fout:
+                          #       fout.write(qa_data[i])
+                          with open(summary_path, 'a') as fout:
+                                 fout.write(summary_data)
                           
                           
                           
@@ -113,7 +131,7 @@ def CharacterRead(args):
     # 用于存储名字和描述
     names = []
     descriptions = []
-
+    
     # 正则表达式：提取名字和描述（假设格式为 '名字: 描述'）
     pattern = re.compile(r'([^:]+):\s*(.+)')
 
