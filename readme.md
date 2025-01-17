@@ -52,4 +52,5 @@ If you want to use it for commercial use, please contact wuchenyan0823@gmail.com
 
 ### Work Introduction
 
-In this section, I will briefly introduce the technical aspects of the project. Our main contributions are summarized as follows:
+  In this section, I will briefly introduce the technical aspects of the project. Our main contributions are summarized as follows:
+  - 1.
