@@ -48,3 +48,8 @@ bash run.sh
 This project is intended for non-commercial use
 If you want to use it for commercial use, please contact wuchenyan0823@gmail.com
 ```
+## Technical Report (Technical part of the report)
+
+### Work Introduction
+
+In this section, I will briefly introduce the technical aspects of the project. Our main contributions are summarized as follows:

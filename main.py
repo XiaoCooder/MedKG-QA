@@ -167,28 +167,42 @@ def CharacterRead(args):
       
 if __name__=="__main__":
     args = parse_args()
-    #create DB （如果第一次安装可能没有数据）
-    sllm.retrieve.get_collection(args.encoder_model,name="qas" ,chroma_dir= args.chroma_dir)
-    sllm.retrieve.get_collection(args.encoder_model,name="context" ,chroma_dir= args.chroma_dir)
-    sllm.retrieve.get_collection(args.encoder_model,name="summary" ,chroma_dir= args.chroma_dir)
-    #reset DB （避免遗留数据）
-    sllm.retrieve.rebuild_collection(args.encoder_model,name="qas" ,chroma_dir= args.chroma_dir)
-    sllm.retrieve.rebuild_collection(args.encoder_model,name="context" ,chroma_dir= args.chroma_dir)
-    sllm.retrieve.rebuild_collection(args.encoder_model,name="summary" ,chroma_dir= args.chroma_dir)
-    #load api-key
-    if not args.key.startswith("sk-"):
-        with open(args.key, "r",encoding='utf-8') as f:
-            all_keys = f.readlines()
-            all_keys = [line.strip('\n') for line in all_keys]
-    args.key = all_keys[0]
+    flag =True
+    while (True):
+        if (flag):
+            user_input = input("I noticed that there is already data in your database. \nDo you need to open the Q&A directly? \nIf not, I will process the new input data\n").strip().lower()
+            flag = False
+        else:
+            user_input = input("Invalid input. Please enter 'yes' or 'no'.\n")
+        if user_input == "no":
+            #create DB （如果第一次安装可能没有数据）
+            sllm.retrieve.get_collection(args.encoder_model,name="qas" ,chroma_dir= args.chroma_dir)
+            sllm.retrieve.get_collection(args.encoder_model,name="context" ,chroma_dir= args.chroma_dir)
+            sllm.retrieve.get_collection(args.encoder_model,name="summary" ,chroma_dir= args.chroma_dir)
+            #reset DB （避免遗留数据）
+            sllm.retrieve.rebuild_collection(args.encoder_model,name="qas" ,chroma_dir= args.chroma_dir)
+            sllm.retrieve.rebuild_collection(args.encoder_model,name="context" ,chroma_dir= args.chroma_dir)
+            sllm.retrieve.rebuild_collection(args.encoder_model,name="summary" ,chroma_dir= args.chroma_dir)
+            #load api-key
+            if not args.key.startswith("sk-"):
+                with open(args.key, "r",encoding='utf-8') as f:
+                    all_keys = f.readlines()
+                    all_keys = [line.strip('\n') for line in all_keys]
+            args.key = all_keys[0]
+            #loda interview data
+            InterviewData,InterviewCha = InterviewRead(args)
+            Names, Descriptions = CharacterRead(args)
+            #process
+            InterviewProcess(args,InterviewData,InterviewCha,Names,Descriptions)
+            #Q&A system
+            qa_bot = sllm.user_qa.user_qa(args)
+            qa_bot.start()  
+            
+        elif user_input == "yes":
+            #Q&A system
+            qa_bot = sllm.user_qa.user_qa(args)
+            qa_bot.start()  
+        
+        else: continue
 
-    #loda interview data
-    InterviewData,InterviewCha = InterviewRead(args)
-    Names, Descriptions = CharacterRead(args)
-  
-    #process
-    InterviewProcess(args,InterviewData,InterviewCha,Names,Descriptions)
-  
-    #Q&A system
-    qa_bot = sllm.user_qa(args)
-    qa_bot.start()  
+    
