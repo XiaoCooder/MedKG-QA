@@ -3,7 +3,7 @@ import structllm as sllm
 import json
 import openai
 
-def Interview(args, data, character, names, descriptions):
+def Interview(args, data, character, names, descriptions, chunk_id):
 
     #args 系统设置
     #data：text ：访谈内容
@@ -184,8 +184,8 @@ def Interview(args, data, character, names, descriptions):
             total_num += 1 # 可得到结果
     
     ########3.注入数据库#######
-    sllm.retrieve.get_qas_collection_and_write(args.encoder_model , qa_data = qa_data)
-    sllm.retrieve.get_summary_collection_and_write(args.encoder_model , summarydata = summary_data)
-    sllm.retrieve.get_context_collection_and_write(args.encoder_model , context = cleaned_data, chunk)
+    sllm.retrieve.get_qas_collection_and_write(args.encoder_model , qa_data = qa_data, chunk_id = chunk_id)
+    sllm.retrieve.get_summary_collection_and_write(args.encoder_model , summarydata = summary_data, chunk_id = chunk_id)
+    sllm.retrieve.get_context_collection_and_write(args.encoder_model , context = cleaned_data, chunk_id = chunk_id)
     
     return cleaned_data, qa_data, summary_data

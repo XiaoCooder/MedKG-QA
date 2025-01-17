@@ -166,7 +166,7 @@ def get_collection(retriever: str, name: str = None ,chroma_dir: str = None):
     return Collection
 
 #获取qas_collection并存储prompt
-def get_qas_collection_and_write(retriever: str , prompt_data: list = None, name: str = None ,chroma_dir: str = None, chunk = None):
+def get_qas_collection_and_write(retriever: str , qa_data: list = None, name: str = None ,chroma_dir: str = None, chunk_id = None):
 #1 起服务
     encoder = Encoder(retriever)
     if name == None:
@@ -309,11 +309,11 @@ def get_summary_collection_and_query(retriever: str, name: str = None, chroma_di
     return results_relation
 
 #获取qa_collection并存储prompt
-def get_context_collection_and_write(retriever: str, prompt_data: list = None, name: str = None, chroma_dir: str = None, chunk = None):
+def get_context_collection_and_write(retriever: str, prompt_data: list = None, name: str = None, chroma_dir: str = None, chunk_id = None):
 #1 起服务
     encoder = Encoder(retriever)
     if name == None:
-        name = "qa"
+        name = "context"
     
     embedding_function = encoder.ef
     chroma_client = chromadb.HttpClient(host='127.0.0.1', port=8000)
@@ -366,11 +366,11 @@ def get_context_collection_and_write(retriever: str, prompt_data: list = None, n
     return None
 
 #获取qa_collection并存储prompt
-def get_summary_collection_and_write(retriever: str, prompt_data: list = None, name: str = None, chroma_dir: str = None, chunk = None):
+def get_summary_collection_and_write(retriever: str, summary_data, name: str = None, chroma_dir: str = None, chunk_id = None):
 #1 起服务
     encoder = Encoder(retriever)
     if name == None:
-        name = "qa"
+        name = "summary"
     
     embedding_function = encoder.ef
     chroma_client = chromadb.HttpClient(host='127.0.0.1', port=8000)
@@ -383,11 +383,10 @@ def get_summary_collection_and_write(retriever: str, prompt_data: list = None, n
 #2 拆包
     retrieve_data = []
 
-    for idx , elements in enumerate(prompt_data):
+    for idx , elements in enumerate(summary_data):
         k,v = elements[0],elements[1]
         data_prompt = {
-                    "question": k,
-                    "content": v
+                    "summary": k
         }
         if(data_prompt in retrieve_data): continue
         retrieve_data.append(data_prompt)
