@@ -3,3 +3,4 @@ chroma.log
 output/
 chromadb/SentenceBERT/interview/
 input/
+api_key.txt
