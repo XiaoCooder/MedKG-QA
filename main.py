@@ -116,10 +116,14 @@ def parse_args():
     parser.add_argument('--data_path', default="dataset/WikiSQL_CG", type=str, help='The CG data pth.')
     parser.add_argument('--character_path', default="input/character.txt", type=str, help='')
     
+    #prompt path
     parser.add_argument('--clean_prompt_path', default="structllm/prompt_/clean_prompt.json", type=str, help='The prompt pth.')
     parser.add_argument('--extract_q_prompt_path', default="structllm/prompt_/extract_q_prompt.json", type=str, help='The prompt pth.')
     parser.add_argument('--extract_a_prompt_path', default="structllm/prompt_/extract_a_prompt.json", type=str, help='The prompt pth.')
     parser.add_argument('--summary_prompt_path', default="structllm/prompt_/summary_prompt.json", type=str, help='The prompt pth.')
+    parser.add_argument('--cot_1_prompt', default="structllm/prompt_/Cot_1_prompt.json", type=str, help='The prompt pth.')
+    parser.add_argument('--cot_2_prompt', default="structllm/prompt_/Cot_2_prompt.json", type=str, help='The prompt pth.')
+    parser.add_argument('--cot_3_prompt', default="structllm/prompt_/Cot_3_prompt.json", type=str, help='The prompt pth.')
     parser.add_argument('--batch_size', default="10", type=int, help='The prompt pth.')
     
     # setting model
