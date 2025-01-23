@@ -35,11 +35,11 @@ git lfs clone https://hf-mirror.com/dunzhang/stella_en_400M_v5
 ```
 
 ## Run System
-- Start Chromadb service
+- Start Chromadb service with code
 ```
 chroma run --path /YourPath/chromadb/SentenceBERT/interview --port 8000
 ```
-- Run chromadb service with code
+- Start system
 ```
 bash run.sh
 ```
