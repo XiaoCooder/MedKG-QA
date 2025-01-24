@@ -53,4 +53,6 @@ If you want to use it for commercial use, please contact wuchenyan0823@gmail.com
 ### Work Introduction
 
   In this section, I will briefly introduce the technical aspects of the project. Our main contributions are summarized as follows:
-  - 1.
+  - 1.We use self prompt extraction to capture potential semantics from the interview corpus and use this method to transform the source text into context, question answer pairs, and summaries for retrieval.
+  - 2.We use the LLM-based Reranker module, leveraging the semantic understanding ability of LLM to rank context, question answer pairs, and summaries in a hierarchical manner, and ultimately fusion these ranking similarities to obtain the final retrieval results
+  - 3.Finally, we propose a dialogue robot module based on Cot that fully utilizes Reranker's ranking results and multi-level semantic guidance for LLM to answer questions.
