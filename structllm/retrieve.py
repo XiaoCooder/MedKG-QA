@@ -380,7 +380,7 @@ def get_context_collection_and_write(retriever: str, context_data: list = None, 
     return None
 
 #获取qa_collection并存储prompt
-def get_summary_collection_and_write(retriever: str, summarydata, name: str = None, chroma_dir: str = None, chunk_id = None):
+def get_summary_collection_and_write(retriever: str, summarydata, chunk_data, name: str = None, chroma_dir: str = None, chunk_id = None):
 
 #1 起服务
     encoder = Encoder(retriever)
@@ -399,7 +399,8 @@ def get_summary_collection_and_write(retriever: str, summarydata, name: str = No
     retrieve_data = []
     data_prompt = {
         "summary": summarydata,
-        "chunk_id": chunk_id
+        "chunk_id": chunk_id,
+        "chunk_data": chunk_data
     }
     retrieve_data.append(data_prompt)
 #3 编码，存储
@@ -437,8 +438,7 @@ def get_path_collection_and_write(retriever: str, path):
     
 #1 起服务
     encoder = Encoder(retriever)
-    if name == None:
-        name = "path"
+    name = "path"
     
     embedding_function = encoder.ef
     chroma_client = chromadb.HttpClient(host='127.0.0.1', port=8000)
@@ -486,11 +486,9 @@ def get_path_collection_and_write(retriever: str, path):
         )
     return None
 
-def get_output_path(retriever: str, name: str = None, recall_num : int = 1):
-    
+def get_output_path(retriever: str, recall_num : int = 1):
     encoder = Encoder(retriever)
-    if name == None:
-        name = "path"
+    name = "path"
     
     embedding_function = encoder.ef
     chroma_client =  chromadb.HttpClient(host='127.0.0.1', port=8000)
@@ -503,3 +501,18 @@ def get_output_path(retriever: str, name: str = None, recall_num : int = 1):
     results_summary = collection.query(query_texts = name, n_results = recall_num)
     return results_summary
 
+def get_summary_collection_and_query_chunk(retriever: str, chunk_id = None):
+    
+    encoder = Encoder(retriever)
+    name = "summary"
+    
+    embedding_function = encoder.ef
+    chroma_client =  chromadb.HttpClient(host='127.0.0.1', port=8000)
+    collection = chroma_client.create_collection(
+        name=name,
+        metadata={"hnsw:space": "cosine"},
+        embedding_function=embedding_function,
+        get_or_create=True,
+    )
+    qas_result = collection.get(where={"chunk_id": chunk_id})
+    return qas_result

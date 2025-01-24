@@ -6,6 +6,7 @@ import structllm as sllm
 from collections import defaultdict
 import re
 
+os.environ["TOKENIZERS_PARALLELISM"] = "true"
 
 def check_path(path):
     d = os.path.dirname(path)
@@ -120,12 +121,14 @@ def parse_args():
     parser.add_argument('--extract_a_prompt_path', default="structllm/prompt_/extract_a_prompt.json", type=str, help='The prompt pth.')
     parser.add_argument('--summary_prompt_path', default="structllm/prompt_/summary_prompt.json", type=str, help='The prompt pth.')
     parser.add_argument('--reranker_prompt', default="structllm/prompt_/reranker_prompt.json", type=str, help='The prompt pth.')
-    parser.add_argument('--batch_size', default="10", type=int, help='The prompt pth.')
+    parser.add_argument('--qa_prompt', default="structllm/prompt_/qa_prompt.json", type=str, help='The prompt pth.')
     
     # setting model
     parser.add_argument('--model', default="gpt-3.5-turbo", type=str, help='The openai model. "gpt-3.5-turbo-0125" and "gpt-4-1106-preview" are supported')
     parser.add_argument('--encoder_model', default="SentenceBERT", type=str, help='The openai model. "gpt-3.5-turbo-0125" and "gpt-4-1106-preview" are supported')
     parser.add_argument('--retriever_align', default="SentenceBERT", type=str, help='')
+    parser.add_argument('--batch_size', default="10", type=int, help='The prompt pth.')
+
     # output
     parser.add_argument('--store_error', action="store_true", default=True)
     parser.add_argument('--error_file_path', default="timeout_file.txt", type=str)
@@ -166,6 +169,13 @@ def CharacterRead(args):
       
 if __name__=="__main__":
     args = parse_args()
+    #load api-key
+    if not args.key.startswith("sk-"):
+        with open(args.key, "r",encoding='utf-8') as f:
+            all_keys = f.readlines()
+            all_keys = [line.strip('\n') for line in all_keys]
+    args.key = all_keys[0]
+    
     flag =True
     while (True):
         if (flag):
@@ -185,12 +195,6 @@ if __name__=="__main__":
             sllm.retrieve.rebuild_collection(args.encoder_model,name="summary" ,chroma_dir= args.chroma_dir)
             sllm.retrieve.rebuild_collection(args.encoder_model,name="path" ,chroma_dir= args.chroma_dir)
 
-            #load api-key
-            if not args.key.startswith("sk-"):
-                with open(args.key, "r",encoding='utf-8') as f:
-                    all_keys = f.readlines()
-                    all_keys = [line.strip('\n') for line in all_keys]
-            args.key = all_keys[0]
             #loda interview data
             InterviewData,InterviewCha = InterviewRead(args)
             Names, Descriptions = CharacterRead(args)
@@ -204,8 +208,9 @@ if __name__=="__main__":
             
         elif user_input == "yes":
             #Q&A system
-            
-            args.qa_output_path = os.path.join(sllm.retrieve.get_output_path(args.encoder_model), 'qa_history.txt')
+            path = [candidate_content.get('path') for candidate_content in sllm.retrieve.get_output_path(args.encoder_model)['metadatas'][0]][0]
+            args.qa_output_path = os.path.join(path, 'qa_history.txt')
+            print(args.qa_output_path)
             qa_bot = sllm.user_qa.user_qa(args)
             qa_bot.start()  
         

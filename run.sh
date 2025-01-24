@@ -20,7 +20,6 @@ CUDA_VISIBLE_DEVICES=$GPU python main.py \
 --extract_a_prompt_path structllm/prompt_/extract_a_prompt.json \
 --summary_prompt_path structllm/prompt_/summary_prompt.json \
 --character_path input/character.txt \
---output_result_path output/output_result.txt \
 --debug 1 \
 --batch_size ${batch_size} \
 --encoder_model ${encoder_model} \

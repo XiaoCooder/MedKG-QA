@@ -14,6 +14,7 @@ def Interview(args, data, character, names, descriptions, chunk_id):
     qa_data , cleaned_data = [], []
     summary_data = None
     context_data = data
+    chunk_data = ''
     for i in range(len(data)):  
        mini_data = data[i]
        mini_character = character[i]
@@ -64,6 +65,10 @@ def Interview(args, data, character, names, descriptions, chunk_id):
                     total_num += 1 # 防止卡死
                     continue
                 flag = False
+
+    for i in range(len(cleaned_data)):
+        chunk_data = chunk_data + cleaned_data[i]
+    
     flag = True
     ns ,qs =[], []
     while (flag) :
@@ -184,7 +189,7 @@ def Interview(args, data, character, names, descriptions, chunk_id):
     #import pdb; pdb.set_trace()
     ########3.注入数据库#######
     sllm.retrieve.get_qas_collection_and_write(args.encoder_model , qa_data = qa_data, chunk_id = chunk_id)
-    sllm.retrieve.get_summary_collection_and_write(args.encoder_model , summarydata = summary_data, chunk_id = chunk_id)
+    sllm.retrieve.get_summary_collection_and_write(args.encoder_model , summarydata = summary_data, chunk_data = chunk_data, chunk_id = chunk_id)
     sllm.retrieve.get_context_collection_and_write(args.encoder_model , context_data = cleaned_data, chunk_id = chunk_id)
     
     return cleaned_data, qa_data, summary_data

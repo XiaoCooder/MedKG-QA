@@ -4,6 +4,7 @@ import ast
 from sentence_transformers import SentenceTransformer,util
 import torch
 import re
+import json
 
 class align:
     def __init__(self,args):
@@ -86,7 +87,9 @@ def get_parameters(text):
     return names, questions
 
 def get_chunk_id(result, chunk_ids):
-    id_list = []
-    for i in range(len(result)):
-        id_list.append(chunk_ids[result[i]])
-    return id_list
+    #transfer rerank string into chunk_id list
+    matches = re.findall(r'\[.*?\]', result)
+    #import pdb; pdb.set_trace()
+    #result_array = ast.literal_eval(matches)
+    chunk_id_list = json.loads(matches[0])
+    return chunk_id_list
