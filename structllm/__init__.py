@@ -4,3 +4,5 @@ from . import Interview
 from . import align
 from . import retrieve
 from . import user_qa
+from . import rerank
+from . import cot

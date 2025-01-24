@@ -78,7 +78,7 @@ class query_prompt():
          
         elif task == "summary_rerank":
          try:
-           with open(args.cot_1_prompt,'r',encoding = 'utf-8') as json_file:
+           with open(args.reranker_prompt,'r',encoding = 'utf-8') as json_file:
                 self.naive_prompt = json.load(json_file)
                 self.naive_prompt.append(
                          {
@@ -91,7 +91,7 @@ class query_prompt():
              pass
         elif task == "context_rerank":
          try:
-           with open(args.cot_2_prompt,'r',encoding = 'utf-8') as json_file:
+           with open(args.reranker_prompt,'r',encoding = 'utf-8') as json_file:
                 self.naive_prompt = json.load(json_file)
                 self.naive_prompt.append(
                          {
@@ -104,7 +104,7 @@ class query_prompt():
              pass
         elif task == "qas_rerank":
          try:
-           with open(args.cot_3_prompt,'r',encoding = 'utf-8') as json_file:
+           with open(args.reranker_prompt,'r',encoding = 'utf-8') as json_file:
                 self.naive_prompt = json.load(json_file)
                 self.naive_prompt.append(
                          {
@@ -163,12 +163,9 @@ class query_prompt():
               Prompt = Prompt + f"\nparagraph{i}" + data[i]
 
         if task == "get_answer":
-           Prompt = "the question is:" + question
-           task_prompt = "\nHere are some conversation contents, and the answers to the question come from the conversation. Please provide me with the relevance between the sequence number of the conversation content and the questions. \nreturn an array as format, and put the most possible answer first, for example: [0, 2, 1]"   
-           Prompt = Prompt + task_prompt
-           for i in range(len(data)):
-              Prompt = Prompt + f"\nparagraph{i}" + data[i]
-
+            task_prompt = f"I need you to answer the question: {question} "   
+            #data_prompt = 
+            
         return Prompt
     
    

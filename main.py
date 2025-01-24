@@ -13,9 +13,7 @@ def check_path(path):
         os.makedirs(d)
 
 def InterviewProcess(args,Data,Cha,Names,Descriptions):
-    output_result_path = args.output_result_path
-    with open(output_result_path+".txt", "w",encoding='utf-8') as fresult:
-                # fdetail.write(f"=== Answer:{answer}\n")
+                
                 if not args.debug:
                     try:
                         for i in range(len(Data) // args.batch_size + (1 if len(Data) % args.batch_size != 0 else 0)):
@@ -121,9 +119,7 @@ def parse_args():
     parser.add_argument('--extract_q_prompt_path', default="structllm/prompt_/extract_q_prompt.json", type=str, help='The prompt pth.')
     parser.add_argument('--extract_a_prompt_path', default="structllm/prompt_/extract_a_prompt.json", type=str, help='The prompt pth.')
     parser.add_argument('--summary_prompt_path', default="structllm/prompt_/summary_prompt.json", type=str, help='The prompt pth.')
-    parser.add_argument('--cot_1_prompt', default="structllm/prompt_/Cot_1_prompt.json", type=str, help='The prompt pth.')
-    parser.add_argument('--cot_2_prompt', default="structllm/prompt_/Cot_2_prompt.json", type=str, help='The prompt pth.')
-    parser.add_argument('--cot_3_prompt', default="structllm/prompt_/Cot_3_prompt.json", type=str, help='The prompt pth.')
+    parser.add_argument('--reranker_prompt', default="structllm/prompt_/reranker_prompt.json", type=str, help='The prompt pth.')
     parser.add_argument('--batch_size', default="10", type=int, help='The prompt pth.')
     
     # setting model
@@ -133,9 +129,8 @@ def parse_args():
     # output
     parser.add_argument('--store_error', action="store_true", default=True)
     parser.add_argument('--error_file_path', default="timeout_file.txt", type=str)
-    parser.add_argument('--output_result_path', default="output/output_result.txt", type=str)
     parser.add_argument('--output_path', default="output/output_result.txt", type=str)
-    
+    parser.add_argument('--qa_output_path', default="output/qa_history.txt", type=str)
     parser.add_argument('--chroma_dir', default="chroma", type=str, help='The chroma dir.')
     #others
     parser.add_argument('--debug', default=0, type=int)
@@ -183,10 +178,13 @@ if __name__=="__main__":
             sllm.retrieve.get_collection(args.encoder_model,name="qas" ,chroma_dir= args.chroma_dir)
             sllm.retrieve.get_collection(args.encoder_model,name="context" ,chroma_dir= args.chroma_dir)
             sllm.retrieve.get_collection(args.encoder_model,name="summary" ,chroma_dir= args.chroma_dir)
+            sllm.retrieve.get_collection(args.encoder_model, name="path" ,chroma_dir= args.chroma_dir)
             #reset DB （避免遗留数据）
             sllm.retrieve.rebuild_collection(args.encoder_model,name="qas" ,chroma_dir= args.chroma_dir)
             sllm.retrieve.rebuild_collection(args.encoder_model,name="context" ,chroma_dir= args.chroma_dir)
             sllm.retrieve.rebuild_collection(args.encoder_model,name="summary" ,chroma_dir= args.chroma_dir)
+            sllm.retrieve.rebuild_collection(args.encoder_model,name="path" ,chroma_dir= args.chroma_dir)
+
             #load api-key
             if not args.key.startswith("sk-"):
                 with open(args.key, "r",encoding='utf-8') as f:
@@ -199,11 +197,15 @@ if __name__=="__main__":
             #process
             InterviewProcess(args,InterviewData,InterviewCha,Names,Descriptions)
             #Q&A system
+            sllm.retrieve.get_path_collection_and_write(args.encoder_model, path = args.output_path)
+            args.qa_output_path = os.path.join(args.output_path, 'qa_history.txt')
             qa_bot = sllm.user_qa.user_qa(args)
             qa_bot.start()  
             
         elif user_input == "yes":
             #Q&A system
+            
+            args.qa_output_path = os.path.join(sllm.retrieve.get_output_path(args.encoder_model), 'qa_history.txt')
             qa_bot = sllm.user_qa.user_qa(args)
             qa_bot.start()  
         

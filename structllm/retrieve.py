@@ -381,6 +381,7 @@ def get_context_collection_and_write(retriever: str, context_data: list = None, 
 
 #获取qa_collection并存储prompt
 def get_summary_collection_and_write(retriever: str, summarydata, name: str = None, chroma_dir: str = None, chunk_id = None):
+
 #1 起服务
     encoder = Encoder(retriever)
     if name == None:
@@ -432,4 +433,73 @@ def get_summary_collection_and_write(retriever: str, summarydata, name: str = No
         )
     return None
 
+def get_path_collection_and_write(retriever: str, path):
+    
+#1 起服务
+    encoder = Encoder(retriever)
+    if name == None:
+        name = "path"
+    
+    embedding_function = encoder.ef
+    chroma_client = chromadb.HttpClient(host='127.0.0.1', port=8000)
+    collection = chroma_client.create_collection(
+        name=name,
+        metadata={"hnsw:space": "cosine"},
+        embedding_function=embedding_function,
+        get_or_create=True,
+    )
+#2 拆包
+    retrieve_data = []
+    data_prompt = {
+        "name": name ,
+        "path": path
+    }
+    retrieve_data.append(data_prompt)
+#3 编码，存储
+    encoder_ = encoder.encoder
+    docs = [item["name"] for item in retrieve_data] #question list
+    meta_keys = list(retrieve_data[0].keys())           #data中dict的keys
+    #del meta_keys[meta_keys.index("question")] #删除question，只剩下content
+    embeddings = encoder_.encode(docs, batch_size=64, show_progress_bar=True)
+    if not isinstance(embeddings, list):
+        embeddings = embeddings.tolist()
+ 
+    if len(embeddings) > 20000:
+        for i in range(0, len(embeddings), 20000):
+            collection.add(
+                embeddings=embeddings[i : i + 20000],
+                documents=docs[i : i + 20000],
+                metadatas=[
+                    {key: retrieve_data[i][key] for key in meta_keys}
+                    for i in range(i, min(len(embeddings), i + 20000))
+                ],
+                ids=[str(i) for i in range(i, min(len(embeddings), i + 20000))],
+            )
+    else:
+        collection.add(
+            embeddings=embeddings,
+            documents=docs,
+            metadatas=[
+                {key: retrieve_data[i][key] for key in meta_keys} for i in range(len(docs))
+            ],
+            ids=[str(i) for i in NanoIDGenerator(len(docs))],
+        )
+    return None
+
+def get_output_path(retriever: str, name: str = None, recall_num : int = 1):
+    
+    encoder = Encoder(retriever)
+    if name == None:
+        name = "path"
+    
+    embedding_function = encoder.ef
+    chroma_client =  chromadb.HttpClient(host='127.0.0.1', port=8000)
+    collection = chroma_client.create_collection(
+        name=name,
+        metadata={"hnsw:space": "cosine"},
+        embedding_function=embedding_function,
+        get_or_create=True,
+    )
+    results_summary = collection.query(query_texts = name, n_results = recall_num)
+    return results_summary
 
