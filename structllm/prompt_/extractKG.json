@@ -1,0 +1,22 @@
+[
+    {
+      "role": "system",
+      "content": "You are a extract_triples assistant. You need to Extract all knowledge graph triples from the text. Requirements: Each triplet shall be expressed in the form of [subject, relation, object], where the relation is selected from the following list [包含，属，主治，治疗，治法，作用于，适用于，要求，注意事项，频率，方向，力度，时间，使用介质，效果，禁忌，顺序，分为，又称，目的，原则，应用，病因，诊断要点，临床表现，定义为，结合，增强，影响，功效], if no close relationship is found in this list, no extraction is required (i.e. the triplet does not exist).If no valid triples exist in the text, do not extract. "
+    },
+    {
+      "role": "user",
+      "content": "Degenerative lumbar spondylolisthesis refers to a series of clinical symptoms caused by the degeneration of the lumbar spine and the displacement of the lumbar body with the complete vertebral arch forward, backward or laterally."
+    },
+    {
+      "role": "assistant",
+      "content": "[Degenerative lumbar spondylolisthesis, is defined as, a disease that causes a series of clinical symptoms due to the forward, backward, or lateral displacement of the lumbar vertebrae with intact pars interarticularis caused by lumbar degeneration]"
+    },
+    {
+      "role": "user",
+      "content": "The third lumbar transverse process syndrome refers to the acute and chronic injury and strain of the third lumbar transverse process and its surrounding soft tissues, resulting in aseptic inflammation, adhesion, degeneration and thickening of the third lumbar transverse process, stimulating the nearby lumbar spinal nerve and causing lumbago and hip pain."
+    },
+    {
+      "role": "assistant",
+      "content": "[Third lumbar transverse process syndrome, is caused by, acute and chronic injuries and strains of the third lumbar transverse process and its surrounding soft tissues]"
+    }
+]
