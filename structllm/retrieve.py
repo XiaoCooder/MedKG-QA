@@ -457,7 +457,7 @@ def get_triples_collection_and_write(retriever: str, triple_data: list = None, n
         )
     return None
 
-def get_triples_head_collection_and_write(retriever: str, triple_data: list = None, name: str = None, chroma_dir: str = None, value: str = None):
+def get_triples_head_collection_and_write(retriever: str, data: list = None, name: str = None, chroma_dir: str = None, value: str = None):
     """
     仅将提取到的三元组数据中的 head 部分写入数据库。
 
@@ -507,7 +507,7 @@ def get_triples_head_collection_and_write(retriever: str, triple_data: list = No
             collection.add(
                 embeddings=embeddings[i: i + 20000],
                 documents=docs[i: i + 20000],
-                metadatas=[{"head": retrieve_data[j]["head"]} for j in range(i, min(len(embeddings), i + 20000))],
+                metadatas=[{"head": retrieve_data[i]["head"],"head": retrieve_data[j]["head"],"head": retrieve_data[j]["head"],} for j in range(i, min(len(embeddings), i + 20000))],
                 ids=[str(j) for j in range(i, min(len(embeddings), i + 20000))],
             )
     else:
