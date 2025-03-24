@@ -5,7 +5,7 @@ task_name=processed_Interview
 GPU=0
 
 model=deepseek-chat
-input=Musk2
+input=zhongyituina
 encoder_model=SentenceBERT
 batch_size=10
 args=$@
@@ -13,7 +13,7 @@ args=$@
 CUDA_VISIBLE_DEVICES=$GPU python main.py \
 --key api_key.txt \
 --openai_url https://api.deepseek.com/v1 \
---data_path input/${input}.txt \
+--data_path input/zhongyituina.txt \
 --model ${model} \
 --clean_prompt_path structllm/prompt_/clean_prompt.json \
 --extract_q_prompt_path structllm/prompt_/extract_q_prompt.json \

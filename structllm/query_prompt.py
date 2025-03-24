@@ -129,6 +129,20 @@ class query_prompt():
          except json.JSONDecodeError as e:
              #print(f"JSON 解码错误: {e}")
              pass
+        
+        elif task == "extract_triple":
+         try:
+           with open(args.extractKG_prompt,'r',encoding = 'utf-8') as json_file:
+                self.naive_prompt = json.load(json_file)
+                self.naive_prompt.append(
+                         {
+                             "role": "user",
+                             "content": self.add_ask_Prompt(self.data, question, task)
+                         }
+                )
+         except json.JSONDecodeError as e:
+             #print(f"JSON 解码错误: {e}")
+             pass
          
 
     def add_query_Prompt(self, data, character=None , names = None, question=None):
@@ -168,6 +182,13 @@ class query_prompt():
             for i in range(len(data)):
                data_prompt = data_prompt + data[i]
             Prompt = task_prompt + data_prompt
+        
+        if task == "extract_triple": 
+            data_prompt = ''  
+            for i in range(len(data)):
+               task_prompt = f"I need you to extract triples from the following:{data[i]}\n"
+               data_prompt = data_prompt + task_prompt
+            Prompt = data_prompt
         return Prompt
     
    

@@ -8,7 +8,7 @@ completion = client.chat.completions.create(
   model="deepseek-chat",
   messages=[
     {"role": "system", "content": "You are a helpful assistant."},
-    {"role": "user", "content": "你喜欢吃什么？"}
+    {"role": "user", "content": "你是谁？"}
   ]
 )
 

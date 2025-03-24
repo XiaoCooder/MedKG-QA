@@ -86,6 +86,26 @@ def get_parameters(text):
        questions.append(match[1].strip())  # 问题
     return names, questions
 
+def get_triples(text):
+    """
+    使用正则表达式从大模型生成的回答中提取三元组。
+    
+    参数：
+        text (str): 大模型的回答文本，其中包含形如 [a, b, c] 的三元组
+    
+    返回：
+        list: 三元组列表，每个三元组为一个包含三个字符串的列表
+    """
+    # 定义正则表达式：
+    # \[ 和 \] 匹配中括号
+    # (.*?) 使用非贪婪匹配提取每个元素，逗号为分隔符
+    pattern = r'\[\s*(.*?)\s*,\s*(.*?)\s*,\s*(.*?)\s*\]'
+    # 使用 re.findall 提取所有匹配的三元组，返回的结果是一个元组列表
+    matches = re.findall(pattern, text)
+    # 将元组转换为列表形式，并去除每个元素两边的空白字符
+    triples = [[item.strip() for item in match] for match in matches]
+    return triples
+
 def get_chunk_id(result, chunk_ids):
     #transfer rerank string into chunk_id list
     matches = re.findall(r'\[.*?\]', result)

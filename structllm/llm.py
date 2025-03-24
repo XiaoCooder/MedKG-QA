@@ -15,7 +15,7 @@ class gpt(object):
         OpenAI.api_key = args.key
         self.url = args.openai_url
 
-        self.client = OpenAI(base_url=self.url, api_key=OpenAI.api_key)
+        self.client = OpenAI(base_url=self.url, api_key=args.key)
 
         """
         else:

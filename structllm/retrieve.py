@@ -26,7 +26,7 @@ def get_model(model_name):
     return model
 
 def get_embedding_BERT(text, model="stella_en_400M_v5") -> List[float]:
-    """ 用于对文本进行编码，编码器是stella_en_400M_v5的,返回值是float list """
+    """ 用于对文本进行编码,编码器是stella_en_400M_v5的,返回值是float list """
     """
     global retrieve_model
     retrieve_model = SentenceTransformer(
@@ -378,6 +378,275 @@ def get_context_collection_and_write(retriever: str, context_data: list = None, 
             ids=[str(i) for i in NanoIDGenerator(len(docs))],
         )
     return None
+
+def get_triples_collection_and_write(retriever: str, triple_data: list = None, name: str = None, chroma_dir: str = None):
+    """
+    将提取到的三元组数据写入数据库。
+
+    参数：
+        retriever: 用于初始化编码器的模型标识（例如模型名称）
+        triple_data: 三元组数据列表，每个元素为形如 [a, b, c] 的三元组
+        name: 数据库集合名称，如果未指定，默认为 "triples"
+        chroma_dir: chromadb 的工作目录（如有需要）
+    """
+    # 1. 初始化服务与编码器
+    from chromadb import HttpClient
+    encoder = Encoder(retriever)
+    if name is None:
+        name = "triples"
+
+    embedding_function = encoder.ef
+    chroma_client = HttpClient(host='127.0.0.1', port=8000)
+    collection = chroma_client.create_collection(
+        name=name,
+        metadata={"hnsw:space": "cosine"},
+        embedding_function=embedding_function,
+        get_or_create=True,
+    )
+
+    # 2. 准备数据
+    retrieve_data = []
+    for i in range(len(triple_data)):
+        data = {
+            "triple": triple_data[i],  # 三元组数据
+        }
+
+        # 过滤掉元数据为 None 的项
+        if any(value is None for value in data.values()):
+            continue  # 如果有元数据为 None，则跳过这一条记录
+
+        retrieve_data.append(data)
+
+    # 将每个三元组转换为字符串（或可选的 JSON 格式），便于编码
+    docs = [str(item["triple"]) for item in retrieve_data]
+    meta_keys = list(retrieve_data[0].keys())  # 获取字典中的所有键
+
+    # 3. 编码并写入数据库
+    encoder_ = encoder.encoder
+    embeddings = encoder_.encode(docs, batch_size=64, show_progress_bar=True)
+    if not isinstance(embeddings, list):
+        embeddings = embeddings.tolist()
+
+    # 处理元数据，将列表转换为字符串（如果是列表的话）
+    def process_metadata(metadata):
+        if isinstance(metadata, list):  # 如果元数据是列表类型
+            return " , ".join(str(x) for x in metadata)  # 使用 ',' 连接每个元素并转换为字符串
+        return metadata  # 否则直接返回元数据
+
+    # 分批添加数据，避免一次性写入过多数据
+    if len(embeddings) > 20000:
+        for i in range(0, len(embeddings), 20000):
+            collection.add(
+                embeddings=embeddings[i: i + 20000],
+                documents=docs[i: i + 20000],
+                metadatas=[
+                    {key: process_metadata(retrieve_data[j][key]) for key in meta_keys}
+                    for j in range(i, min(len(embeddings), i + 20000))
+                ],
+                ids=[str(j) for j in range(i, min(len(embeddings), i + 20000))],
+            )
+    else:
+        collection.add(
+            embeddings=embeddings,
+            documents=docs,
+            metadatas=[
+                {key: process_metadata(retrieve_data[i][key]) for key in meta_keys}
+                for i in range(len(docs))
+            ],
+            ids=[str(i) for i in NanoIDGenerator(len(docs))],
+        )
+    return None
+
+def get_triples_head_collection_and_write(retriever: str, triple_data: list = None, name: str = None, chroma_dir: str = None, value: str = None):
+    """
+    仅将提取到的三元组数据中的 head 部分写入数据库。
+
+    参数：
+        retriever: 用于初始化编码器的模型标识（例如模型名称）
+        triple_data: 三元组数据列表，每个元素为形如 {"head": value, "relation": value, "tail": value} 的字典
+        name: 数据库集合名称，如果未指定，默认为 "heads"
+        chroma_dir: chromadb 的工作目录（如有需要）
+    """
+    # 1. 初始化服务与编码器
+    from chromadb import HttpClient
+    encoder = Encoder(retriever)
+    if name is None:
+        name = "triple_head"  # 只存储 head 部分，集合名称更改为 "head"
+
+    embedding_function = encoder.ef
+    chroma_client = HttpClient(host='127.0.0.1', port=8000)
+    collection = chroma_client.create_collection(
+        name=name,
+        metadata={"hnsw:space": "cosine"},
+        embedding_function=embedding_function,
+        get_or_create=True,
+    )
+
+    # 2. 准备数据，仅保留 head 部分
+    retrieve_data = []
+    for triple in triple_data:
+        if "head" in triple and triple["head"] is not None:
+            retrieve_data.append({"head": triple["head"]})
+
+    if not retrieve_data:
+        print("未找到有效的 head 数据，跳过写入 ChromaDB。")
+        return None
+
+    # 仅存储 head 数据
+    docs = [item["head"] for item in retrieve_data]
+
+    # 3. 编码并写入数据库
+    encoder_ = encoder.encoder
+    embeddings = encoder_.encode(docs, batch_size=64, show_progress_bar=True)
+    if not isinstance(embeddings, list):
+        embeddings = embeddings.tolist()
+
+    # 分批添加数据，避免一次性写入过多数据
+    if len(embeddings) > 20000:
+        for i in range(0, len(embeddings), 20000):
+            collection.add(
+                embeddings=embeddings[i: i + 20000],
+                documents=docs[i: i + 20000],
+                metadatas=[{"head": retrieve_data[j]["head"]} for j in range(i, min(len(embeddings), i + 20000))],
+                ids=[str(j) for j in range(i, min(len(embeddings), i + 20000))],
+            )
+    else:
+        collection.add(
+            embeddings=embeddings,
+            documents=docs,
+            metadatas=[{"head": retrieve_data[i]["head"]} for i in range(len(docs))],
+            ids=[str(i) for i in NanoIDGenerator(len(docs))],
+        )
+
+    return None
+
+def get_triples_relation_collection_and_write(retriever: str, triple_data: list = None, name: str = None, chroma_dir: str = None, value: str = None):
+    """
+    仅将提取到的三元组数据中的 relation 部分写入数据库。
+
+    参数：
+        retriever: 用于初始化编码器的模型标识（例如模型名称）
+        triple_data: 三元组数据列表，每个元素为形如 {"head": value, "relation": value, "tail": value} 的字典
+        name: 数据库集合名称，如果未指定，默认为 "relations"
+        chroma_dir: chromadb 的工作目录（如有需要）
+    """
+    # 1. 初始化服务与编码器
+    from chromadb import HttpClient
+    encoder = Encoder(retriever)
+    if name is None:
+        name = "triple_relation"  # 只存储 relation 部分，集合名称更改为 "relations"
+
+    embedding_function = encoder.ef
+    chroma_client = HttpClient(host='127.0.0.1', port=8000)
+    collection = chroma_client.create_collection(
+        name=name,
+        metadata={"hnsw:space": "cosine"},
+        embedding_function=embedding_function,
+        get_or_create=True,
+    )
+
+    # 2. 准备数据，仅保留 relation 部分
+    retrieve_data = []
+    for triple in triple_data:
+        if "relation" in triple and triple["relation"] is not None:
+            retrieve_data.append({"relation": triple["relation"]})
+
+    if not retrieve_data:
+        print("未找到有效的 relation 数据，跳过写入 ChromaDB。")
+        return None
+
+    # 仅存储 relation 数据
+    docs = [item["relation"] for item in retrieve_data]
+
+    # 3. 编码并写入数据库
+    encoder_ = encoder.encoder
+    embeddings = encoder_.encode(docs, batch_size=64, show_progress_bar=True)
+    if not isinstance(embeddings, list):
+        embeddings = embeddings.tolist()
+
+    # 分批添加数据，避免一次性写入过多数据
+    if len(embeddings) > 20000:
+        for i in range(0, len(embeddings), 20000):
+            collection.add(
+                embeddings=embeddings[i: i + 20000],
+                documents=docs[i: i + 20000],
+                metadatas=[{"relation": retrieve_data[j]["relation"]} for j in range(i, min(len(embeddings), i + 20000))],
+                ids=[str(j) for j in range(i, min(len(embeddings), i + 20000))],
+            )
+    else:
+        collection.add(
+            embeddings=embeddings,
+            documents=docs,
+            metadatas=[{"relation": retrieve_data[i]["relation"]} for i in range(len(docs))],
+            ids=[str(i) for i in NanoIDGenerator(len(docs))],
+        )
+
+    return None
+
+def get_triples_tail_collection_and_write(retriever: str, triple_data: list = None, name: str = None, chroma_dir: str = None, value: str = None):
+    """
+    仅将提取到的三元组数据中的 tail 部分写入数据库。
+
+    参数：
+        retriever: 用于初始化编码器的模型标识（例如模型名称）
+        triple_data: 三元组数据列表，每个元素为形如 {"head": value, "relation": value, "tail": value} 的字典
+        name: 数据库集合名称，如果未指定，默认为 "tails"
+        chroma_dir: chromadb 的工作目录（如有需要）
+    """
+    # 1. 初始化服务与编码器
+    from chromadb import HttpClient
+    encoder = Encoder(retriever)
+    if name is None:
+        name = "triple_tail"  # 只存储 tail 部分，集合名称更改为 "tails"
+
+    embedding_function = encoder.ef
+    chroma_client = HttpClient(host='127.0.0.1', port=8000)
+    collection = chroma_client.create_collection(
+        name=name,
+        metadata={"hnsw:space": "cosine"},
+        embedding_function=embedding_function,
+        get_or_create=True,
+    )
+
+    # 2. 准备数据，仅保留 tail 部分
+    retrieve_data = []
+    for triple in triple_data:
+        if "tail" in triple and triple["tail"] is not None:
+            retrieve_data.append({"tail": triple["tail"]})
+
+    if not retrieve_data:
+        print("未找到有效的 tail 数据，跳过写入 ChromaDB。")
+        return None
+
+    # 仅存储 tail 数据
+    docs = [item["tail"] for item in retrieve_data]
+
+    # 3. 编码并写入数据库
+    encoder_ = encoder.encoder
+    embeddings = encoder_.encode(docs, batch_size=64, show_progress_bar=True)
+    if not isinstance(embeddings, list):
+        embeddings = embeddings.tolist()
+
+    # 分批添加数据，避免一次性写入过多数据
+    if len(embeddings) > 20000:
+        for i in range(0, len(embeddings), 20000):
+            collection.add(
+                embeddings=embeddings[i: i + 20000],
+                documents=docs[i: i + 20000],
+                metadatas=[{"tail": retrieve_data[j]["tail"]} for j in range(i, min(len(embeddings), i + 20000))],
+                ids=[str(j) for j in range(i, min(len(embeddings), i + 20000))],
+            )
+    else:
+        collection.add(
+            embeddings=embeddings,
+            documents=docs,
+            metadatas=[{"tail": retrieve_data[i]["tail"]} for i in range(len(docs))],
+            ids=[str(i) for i in NanoIDGenerator(len(docs))],
+        )
+
+    return None
+
+
 
 #获取qa_collection并存储prompt
 def get_summary_collection_and_write(retriever: str, summarydata, chunk_data, name: str = None, chroma_dir: str = None, chunk_id = None):

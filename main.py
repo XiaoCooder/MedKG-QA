@@ -61,7 +61,37 @@ def InterviewProcess(args,Data,Cha,Names,Descriptions):
                           with open(summary_path, 'a') as fout:
                                  fout.write(summary_data+"\n")
 
-                        
+def KGProcess(args,Data):
+                
+                if not args.debug:
+                    try:
+                        for i in range(len(Data) // args.batch_size + (1 if len(Data) % args.batch_size != 0 else 0)):
+                          start_index = i * args.batch_size
+                          end_index = min(start_index + args.batch_size, len(Data))  # 确保不超过总长度
+                          # 提取一个批次
+                          subData = Data[start_index:end_index]
+                          print(f"*************chunk {i}*************\n")
+                          triple_data = sllm.ExtractKG.ExtractKG(args,subData)
+                    except Exception as e:    
+                        if args.store_error:
+                            pass
+
+                else:
+                    tripledata_path = os.path.join(args.output_path, 'triples.txt')
+                    check_path(tripledata_path)
+                    num_batches = len(Data) // args.batch_size + (1 if len(Data) % args.batch_size != 0 else 0)
+                    for i in tqdm(range(num_batches), desc="Processing batches"):
+                          start_index = i * args.batch_size
+                          end_index = min(start_index + args.batch_size, len(Data))  # 确保不超过总长度
+                          # 提取一个批次
+                          subData = Data[start_index:end_index]
+                          #print(f"chunk {i}")
+                          triple_data = sllm.ExtractKG.ExtractKG(args,subData)
+                          #save chunk
+                          with open(tripledata_path, 'a') as fout:
+                                 fout.write(f"*************chunk {i}*************\n")
+                                 for triple in triple_data:
+                                        fout.write(f"[{triple['head']}, {triple['relation']}, {triple['tail']}]\n")                        
                           
                           
                           
@@ -100,6 +130,39 @@ def InterviewRead(args):
     print(f"length of Interview : {len(data)}")
     return data,character
 
+def TxtRead(args):
+    print('load txt data...')
+    with open(args.data_path, "r", encoding="utf8") as fin:
+        raw_lines = fin.readlines()
+
+    # 先去除空行和两端空白
+    lines = [line.strip() for line in raw_lines]
+
+    sentences = []  # 存储合并后的完整句子
+    current_sentence = ""  # 用来暂存当前正在组合的句子
+
+    # 定义句子结束的标点符号，可根据需要进行扩展
+    sentence_endings = ("。", "!", "?")
+
+    for line in lines:
+        if current_sentence:
+            # 句子拼接时在行间添加空格
+            current_sentence += " " + line
+        else:
+            current_sentence = line
+
+        # 如果当前行以句子结束标点结尾，则认为是完整句子
+        if line.endswith(sentence_endings):
+            sentences.append(current_sentence.strip())
+            current_sentence = ""
+
+    # 如果文件最后一部分没有以结束标点结束，也将其作为一句
+    if current_sentence:
+        sentences.append(current_sentence.strip())
+
+    print(f"文本共 {len(sentences)} 个完整句子")
+    return sentences
+
 
 def parse_args():
     parser = argparse.ArgumentParser(add_help=False)
@@ -122,7 +185,8 @@ def parse_args():
     parser.add_argument('--summary_prompt_path', default="structllm/prompt_/summary_prompt.json", type=str, help='The prompt pth.')
     parser.add_argument('--reranker_prompt', default="structllm/prompt_/reranker_prompt.json", type=str, help='The prompt pth.')
     parser.add_argument('--qa_prompt', default="structllm/prompt_/qa_prompt.json", type=str, help='The prompt pth.')
-    
+    parser.add_argument('--extractKG_prompt', default="structllm/prompt_/extractKG.json", type=str, help='The prompt pth.')
+
     # setting model
     parser.add_argument('--model', default="gpt-3.5-turbo", type=str, help='The openai model. "gpt-3.5-turbo-0125" and "gpt-4-1106-preview" are supported')
     parser.add_argument('--encoder_model', default="SentenceBERT", type=str, help='The openai model. "gpt-3.5-turbo-0125" and "gpt-4-1106-preview" are supported')
@@ -189,17 +253,27 @@ if __name__=="__main__":
             sllm.retrieve.get_collection(args.encoder_model,name="context" ,chroma_dir= args.chroma_dir)
             sllm.retrieve.get_collection(args.encoder_model,name="summary" ,chroma_dir= args.chroma_dir)
             sllm.retrieve.get_collection(args.encoder_model, name="path" ,chroma_dir= args.chroma_dir)
+            sllm.retrieve.get_collection(args.encoder_model, name="triples" ,chroma_dir= args.chroma_dir)
+            sllm.retrieve.get_collection(args.encoder_model, name="triple_head" ,chroma_dir= args.chroma_dir)
+            sllm.retrieve.get_collection(args.encoder_model, name="triple_relation" ,chroma_dir= args.chroma_dir)
+            sllm.retrieve.get_collection(args.encoder_model, name="triple_tail" ,chroma_dir= args.chroma_dir)
             #reset DB （避免遗留数据）
             sllm.retrieve.rebuild_collection(args.encoder_model,name="qas" ,chroma_dir= args.chroma_dir)
             sllm.retrieve.rebuild_collection(args.encoder_model,name="context" ,chroma_dir= args.chroma_dir)
             sllm.retrieve.rebuild_collection(args.encoder_model,name="summary" ,chroma_dir= args.chroma_dir)
             sllm.retrieve.rebuild_collection(args.encoder_model,name="path" ,chroma_dir= args.chroma_dir)
+            sllm.retrieve.rebuild_collection(args.encoder_model,name="triples" ,chroma_dir= args.chroma_dir)
+            sllm.retrieve.rebuild_collection(args.encoder_model,name="triple_head" ,chroma_dir= args.chroma_dir)
+            sllm.retrieve.rebuild_collection(args.encoder_model,name="triple_relation" ,chroma_dir= args.chroma_dir)
+            sllm.retrieve.rebuild_collection(args.encoder_model,name="triple_tail" ,chroma_dir= args.chroma_dir)
 
             #loda interview data
-            InterviewData,InterviewCha = InterviewRead(args)
-            Names, Descriptions = CharacterRead(args)
+            # InterviewData,InterviewCha = InterviewRead(args)
+            # Names, Descriptions = CharacterRead(args)
+            data = TxtRead(args)
             #process
-            InterviewProcess(args,InterviewData,InterviewCha,Names,Descriptions)
+            #InterviewProcess(args,InterviewData,InterviewCha,Names,Descriptions)
+            KGProcess(args,data)
             #Q&A system
             sllm.retrieve.get_path_collection_and_write(args.encoder_model, path = args.output_path)
             args.qa_output_path = os.path.join(args.output_path, 'qa_history.txt')
