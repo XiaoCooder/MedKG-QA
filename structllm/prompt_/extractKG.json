@@ -1,22 +1,22 @@
 [
     {
       "role": "system",
-      "content": "You are a extract_triples assistant. You need to Extract all knowledge graph triples from the text. Requirements: Each triplet shall be expressed in the form of [subject, relation, object], where the relation is selected from the following list [包含，属，主治，治疗，治法，作用于，适用于，要求，注意事项，频率，方向，力度，时间，使用介质，效果，禁忌，顺序，分为，又称，目的，原则，应用，病因，诊断要点，临床表现，定义为，结合，增强，影响，功效], if no close relationship is found in this list, no extraction is required (i.e. the triplet does not exist).If no valid triples exist in the text, do not extract. "
+      "content": "你是一个用于提取三元组的助手。你需要从下面的文本中提取出所有的知识图谱三元组。要求：每个三元组需表示为 [主体, 关系, 客体] 的形式，其中关系从以下列表中进行选择[包含，属，主治，治疗，治法，作用于，适用于，要求，注意事项，频率，方向，力度，时间，使用介质，效果，禁忌，顺序，分为，又称，目的，原则，应用，病因，诊断要点，临床表现，定义为，结合，增强，影响，功效]，如果没有在该列表中找到相近的关系，则无需提取（即不存在该三元组）。如果文本中不存在有效的三元组，请不提取。 "
     },
     {
       "role": "user",
-      "content": "Degenerative lumbar spondylolisthesis refers to a series of clinical symptoms caused by the degeneration of the lumbar spine and the displacement of the lumbar body with the complete vertebral arch forward, backward or laterally."
+      "content": "退行性腰椎滑脱症是指由于腰椎退变而引起椎弓完整的腰椎体向前、向后或向侧方的移位而引起一系列临床症状的疾病。"
     },
     {
       "role": "assistant",
-      "content": "[Degenerative lumbar spondylolisthesis, is defined as, a disease that causes a series of clinical symptoms due to the forward, backward, or lateral displacement of the lumbar vertebrae with intact pars interarticularis caused by lumbar degeneration]"
+      "content": "[退行性腰椎滑脱症, 定义为, 由于腰椎退变而引起椎弓完整的腰椎体向前、向后或向侧方的移位而引起一系列临床症状的疾病]"
     },
     {
       "role": "user",
-      "content": "The third lumbar transverse process syndrome refers to the acute and chronic injury and strain of the third lumbar transverse process and its surrounding soft tissues, resulting in aseptic inflammation, adhesion, degeneration and thickening of the third lumbar transverse process, stimulating the nearby lumbar spinal nerve and causing lumbago and hip pain."
+      "content": "第三腰椎横突综合征是指第三腰椎横突及其周围软组织的急慢性损伤、劳损，使第三腰椎横突处发生无菌性炎症、粘连、变性和增厚，刺激附近的腰脊神经而引起腰臀部疼痛的综合征候群。"
     },
     {
       "role": "assistant",
-      "content": "[Third lumbar transverse process syndrome, is caused by, acute and chronic injuries and strains of the third lumbar transverse process and its surrounding soft tissues]"
+      "content": "[第三腰椎横突综合征，病因是，第三腰椎横突及其周围软组织的急慢性损伤、劳损]"
     }
 ]

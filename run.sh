@@ -2,12 +2,13 @@ OUTPUTPATH=output
 mkdir -p $OUTPUTPATH
 dt=`date '+%Y%m%d_%H%M%S'`
 task_name=processed_Interview
-GPU=0
+GPU=1
 
 model=deepseek-chat
 input=zhongyituina
 encoder_model=SentenceBERT
 batch_size=10
+p=5
 args=$@
 
 CUDA_VISIBLE_DEVICES=$GPU python main.py \
@@ -21,6 +22,7 @@ CUDA_VISIBLE_DEVICES=$GPU python main.py \
 --summary_prompt_path structllm/prompt_/summary_prompt.json \
 --character_path input/character.txt \
 --debug 1 \
+--num_process $p \
 --batch_size ${batch_size} \
 --encoder_model ${encoder_model} \
---output_path $OUTPUTPATH/${input}/llm-${model}__embedding-${encoder_model}__bs-${batch_size}__${dt} $args \
+--output_path $OUTPUTPATH/${input}/llm-${model}__${encoder_model}__bs-${batch_size}__${dt} $args \

@@ -1,6 +1,8 @@
-stella_en_400M_v5/
 chroma.log
 output/
 chromadb/SentenceBERT/interview/
 input/
 api_key.txt
+MiniCPM-Embedding-Light
+structllm/__pycache__
+SentenceBERT

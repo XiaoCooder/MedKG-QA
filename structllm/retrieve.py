@@ -25,8 +25,9 @@ def get_model(model_name):
         )
     return model
 
-def get_embedding_BERT(text, model="stella_en_400M_v5") -> List[float]:
-    """ 用于对文本进行编码,编码器是stella_en_400M_v5的,返回值是float list """
+async def get_embedding_BERT(text) -> List[float]:
+    """ 用于对文本进行编码,编码器是MiniCPM-Embedding-Light的,返回值是float list """
+    
     """
     global retrieve_model
     retrieve_model = SentenceTransformer(
@@ -35,7 +36,7 @@ def get_embedding_BERT(text, model="stella_en_400M_v5") -> List[float]:
         trust_remote_code=True,
     )
     """
-    retrieve_model = get_model(model)
+    retrieve_model = get_model("MiniCPM-Embedding-Light")
     
     if isinstance(text, str):
         result = retrieve_model.encode([text])
@@ -56,7 +57,7 @@ class NewEmbeddingFunction(EmbeddingFunction):
         return embeddings
 
 class EncoderBERT:
-    def encode(
+    async def encode(
         self,
         text: List[str],
         batch_size: int = 16,
@@ -71,7 +72,7 @@ class EncoderBERT:
             batch_text = text[batch_start:batch_end]
             #print(f"Batch {batch_start} to {batch_end-1}")
             assert "" not in batch_text
-            resp = get_embedding_BERT(batch_text)
+            resp = await get_embedding_BERT(batch_text)
             """for i, be in enumerate(resp):
                 assert (
                         i == be.index
@@ -84,28 +85,26 @@ class EncoderBERT:
 class BERT:
     def __init__(self) -> None:
         self.q_model = EncoderBERT()
-        self.doc_model = self.q_model
 
-    def encode(
-        self, queries: List[str], batch_size: int = 16, **kwargs
+    async def encode(
+        self, queries: List[str], batch_size: int = 16, model=None, **kwargs
     ) -> List[Tensor]:
-        return self.q_model.encode(queries, batch_size=batch_size, **kwargs)
+        return await self.q_model.encode(queries, batch_size=batch_size, model=model,**kwargs)
 
 class Encoder:
-
     def __init__(self, encoder_name: str) -> None:
         self.encoder_name = encoder_name
         self.device = "cuda:0" if torch.cuda.is_available() else "cpu"
         if encoder_name == "SentenceBERT":
             self.encoder = BERT()
             self.ef = embedding_functions.SentenceTransformerEmbeddingFunction(
-                "stella_en_400M_v5",
-                self.device,
+                "MiniCPM-Embedding-Light",
+                device="cuda:0" if torch.cuda.is_available() else "cpu",
                 trust_remote_code=True,
             )
         else :pass
 
-def _get_embedding_and_save_to_chroma(
+async def _get_embedding_and_save_to_chroma(
     data: List[Dict[str, str]],
     collection: Collection,
     encoder: Encoder,
@@ -117,7 +116,7 @@ def _get_embedding_and_save_to_chroma(
     docs = [item["question"] for item in data] #question list
     meta_keys = list(data[0].keys())           #data中dict的keys
     del meta_keys[meta_keys.index("question")] #删除question，只剩下content
-    embeddings = encoder_.encode(docs, batch_size=batch_size, show_progress_bar=True)
+    embeddings = await encoder_.encode(docs, batch_size=batch_size, show_progress_bar=True, model=model)
     # else:
     #     embeddings = encoder_.doc_model.encode(
     #         docs, batch_size=batch_size, show_progress_bar=True
@@ -150,7 +149,7 @@ def _get_embedding_and_save_to_chroma(
 #prompt存储
 def put_embedding_prompt(retriever: str, prompt_data: list = None, collection = None):
 
-    encoder = Encoder(retriever)
+    encoder = Encoder(retriever,model=model)
     retrieve_data = []
 
     for idx , elements in enumerate(prompt_data):
@@ -165,12 +164,12 @@ def put_embedding_prompt(retriever: str, prompt_data: list = None, collection = 
     return collection
 
 #获取collection
-def get_collection(retriever: str, name: str = None ,chroma_dir: str = None):
+async def get_collection(name: str = None, encoder = None):
 
-    encoder = Encoder(retriever)
+    encoder = encoder
     embedding_function = encoder.ef
-    chroma_client =  chromadb.HttpClient(host='127.0.0.1', port=8000)
-    Collection =  chroma_client.create_collection(
+    chroma_client = await chromadb.AsyncHttpClient(host='127.0.0.1', port=8000)
+    Collection =  await chroma_client.create_collection(
         name=name,
         metadata={"hnsw:space": "cosine"},
         embedding_function=embedding_function,
@@ -179,14 +178,14 @@ def get_collection(retriever: str, name: str = None ,chroma_dir: str = None):
     return Collection
 
 #获取qas_collection并存储prompt
-def get_qas_collection_and_write(retriever: str , qa_data: list = None, name: str = None ,chroma_dir: str = None, chunk_id = None):
+async def get_qas_collection_and_write(qa_data: list = None, name: str = None , chunk_id = None, encoder = None):
 #1 起服务
-    encoder = Encoder(retriever)
+    encoder = encoder
     if name == None:
         name = "qas"
     
     embedding_function = encoder.ef
-    chroma_client = chromadb.HttpClient(host='127.0.0.1', port=8000)
+    chroma_client = await chromadb.AsyncHttpClient(host='127.0.0.1', port=8000)
     collection = chroma_client.create_collection(
         name=name,
         metadata={"hnsw:space": "cosine"},
@@ -217,7 +216,7 @@ def get_qas_collection_and_write(retriever: str , qa_data: list = None, name: st
  
     if len(embeddings) > 20000:
         for i in range(0, len(embeddings), 20000):
-            collection.add(
+            await collection.add(
                 embeddings=embeddings[i : i + 20000],
                 documents=docs[i : i + 20000],
                 metadatas=[
@@ -227,7 +226,7 @@ def get_qas_collection_and_write(retriever: str , qa_data: list = None, name: st
                 ids=[str(i) for i in range(i, min(len(embeddings), i + 20000))],
             )
     else:
-        collection.add(
+        await collection.add(
             embeddings=embeddings,
             documents=docs,
             metadatas=[
@@ -238,8 +237,8 @@ def get_qas_collection_and_write(retriever: str , qa_data: list = None, name: st
     return None
 
 #获取qas_collection并查询top K
-def get_qas_collection_and_query(retriever: str , name: str = None ,chroma_dir: str = None ,query_texts: str = None ,recall_num : int = None):
-    encoder = Encoder(retriever)
+def get_qas_collection_and_query(retriever: str , name: str = None ,chroma_dir: str = None ,query_texts: str = None ,recall_num : int = None,model=None):
+    encoder = Encoder(retriever,model=model)
     if name == None:
         name = "qas"
     
@@ -255,14 +254,14 @@ def get_qas_collection_and_query(retriever: str , name: str = None ,chroma_dir: 
     return results_qas
 
 #数据库记录数量
-def chroma_count(retriever: str , name: str = None ,chroma_dir: str = None):
-    encoder = Encoder(retriever)
+async def chroma_count(name: str = None , encoder = None):
+    encoder = encoder
     if name == None:
         name = "main"
     
     embedding_function = encoder.ef
-    chroma_client = chromadb.HttpClient(host='127.0.0.1', port=8000)
-    collection = chroma_client.create_collection(
+    chroma_client = await chromadb.AsyncHttpClient(host='127.0.0.1', port=8000)
+    collection = await chroma_client.create_collection(
         name=name,
         metadata={"hnsw:space": "cosine"},
         embedding_function=embedding_function,
@@ -272,13 +271,13 @@ def chroma_count(retriever: str , name: str = None ,chroma_dir: str = None):
     return num
 
 #重置数据库
-def rebuild_collection(retriever: str , name: str = None ,chroma_dir: str = None):
+async def rebuild_collection(name: str = None , encoder=None):
     
-    encoder = Encoder(retriever)
+    encoder = encoder
     embedding_function = encoder.ef
-    chroma_client =  chromadb.HttpClient(host='127.0.0.1', port=8000)
-    chroma_client.delete_collection(name)
-    collection = chroma_client.create_collection(
+    chroma_client = await chromadb.AsyncHttpClient(host='127.0.0.1', port=8000)
+    await chroma_client.delete_collection(name)
+    collection = await chroma_client.create_collection(
         name=name,
         metadata={"hnsw:space": "cosine"},
         embedding_function=embedding_function,
@@ -288,14 +287,14 @@ def rebuild_collection(retriever: str , name: str = None ,chroma_dir: str = None
     return collection
 
 #获取context_collection并查询top K
-def get_context_collection_and_query(retriever: str, name: str = None, chroma_dir: str = None, query_texts: str = None, recall_num : int = None):
+async def get_context_collection_and_query(name: str = None, query_texts: str = None, recall_num : int = None, encoder=None):
     
-    encoder = Encoder(retriever)
+    encoder = encoder
     if name == None:
         name = "context"
     
     embedding_function = encoder.ef
-    chroma_client =  chromadb.HttpClient(host='127.0.0.1', port=8000)
+    chroma_client = await chromadb.AsyncHttpClient(host='127.0.0.1', port=8000)
     collection = chroma_client.create_collection(
         name=name,
         metadata={"hnsw:space": "cosine"},
@@ -306,9 +305,9 @@ def get_context_collection_and_query(retriever: str, name: str = None, chroma_di
     return results_context
 
 #获取summary_collection并查询top K
-def get_summary_collection_and_query(retriever: str, name: str = None, chroma_dir: str = None, query_texts: str = None, recall_num : int = None):
+async def get_summary_collection_and_query(retriever: str, name: str = None, chroma_dir: str = None, query_texts: str = None, recall_num : int = None, model=None):
     
-    encoder = Encoder(retriever)
+    encoder = Encoder(retriever,model=model)
     if name == None:
         name = "summary"
     
@@ -324,15 +323,15 @@ def get_summary_collection_and_query(retriever: str, name: str = None, chroma_di
     return results_summary
 
 #获取qa_collection并存储prompt
-def get_context_collection_and_write(retriever: str, context_data: list = None, name: str = None, chroma_dir: str = None, chunk_id = None):
+async def get_context_collection_and_write(retriever: str, context_data: list = None, name: str = None, chroma_dir: str = None, chunk_id = None, model=None):
 #1 起服务
-    encoder = Encoder(retriever)
+    encoder = Encoder(retriever,model=model)
     if name == None:
         name = "context"
     
     embedding_function = encoder.ef
     chroma_client = chromadb.HttpClient(host='127.0.0.1', port=8000)
-    collection = chroma_client.create_collection(
+    collection = await chroma_client.create_collection(
         name=name,
         metadata={"hnsw:space": "cosine"},
         embedding_function=embedding_function,
@@ -379,7 +378,7 @@ def get_context_collection_and_write(retriever: str, context_data: list = None, 
         )
     return None
 
-def get_triples_collection_and_write(retriever: str, triple_data: list = None, name: str = None, chroma_dir: str = None):
+async def get_triples_collection_and_write(triple_data: list = None, name: str = None, encoder = None):
     """
     将提取到的三元组数据写入数据库。
 
@@ -389,15 +388,13 @@ def get_triples_collection_and_write(retriever: str, triple_data: list = None, n
         name: 数据库集合名称，如果未指定，默认为 "triples"
         chroma_dir: chromadb 的工作目录（如有需要）
     """
-    # 1. 初始化服务与编码器
-    from chromadb import HttpClient
-    encoder = Encoder(retriever)
+    encoder = encoder
     if name is None:
         name = "triples"
 
     embedding_function = encoder.ef
-    chroma_client = HttpClient(host='127.0.0.1', port=8000)
-    collection = chroma_client.create_collection(
+    chroma_client = await chromadb.AsyncHttpClient(host='127.0.0.1', port=8000)
+    collection = await chroma_client.create_collection(
         name=name,
         metadata={"hnsw:space": "cosine"},
         embedding_function=embedding_function,
@@ -423,7 +420,7 @@ def get_triples_collection_and_write(retriever: str, triple_data: list = None, n
 
     # 3. 编码并写入数据库
     encoder_ = encoder.encoder
-    embeddings = encoder_.encode(docs, batch_size=64, show_progress_bar=True)
+    embeddings = await encoder_.encode(docs, batch_size=64, show_progress_bar=True)
     if not isinstance(embeddings, list):
         embeddings = embeddings.tolist()
 
@@ -436,7 +433,7 @@ def get_triples_collection_and_write(retriever: str, triple_data: list = None, n
     # 分批添加数据，避免一次性写入过多数据
     if len(embeddings) > 20000:
         for i in range(0, len(embeddings), 20000):
-            collection.add(
+            await collection.add(
                 embeddings=embeddings[i: i + 20000],
                 documents=docs[i: i + 20000],
                 metadatas=[
@@ -446,7 +443,7 @@ def get_triples_collection_and_write(retriever: str, triple_data: list = None, n
                 ids=[str(j) for j in range(i, min(len(embeddings), i + 20000))],
             )
     else:
-        collection.add(
+        await collection.add(
             embeddings=embeddings,
             documents=docs,
             metadatas=[
@@ -457,25 +454,21 @@ def get_triples_collection_and_write(retriever: str, triple_data: list = None, n
         )
     return None
 
-def get_triples_head_collection_and_write(retriever: str, data: list = None, name: str = None, chroma_dir: str = None, value: str = None):
+async def get_triples_head_collection_and_write(data: list = None, name: str = None, encoder = None):
     """
-    仅将提取到的三元组数据中的 head 部分写入数据库。
-
     参数：
         retriever: 用于初始化编码器的模型标识（例如模型名称）
         triple_data: 三元组数据列表，每个元素为形如 {"head": value, "relation": value, "tail": value} 的字典
         name: 数据库集合名称，如果未指定，默认为 "heads"
         chroma_dir: chromadb 的工作目录（如有需要）
     """
-    # 1. 初始化服务与编码器
-    from chromadb import HttpClient
-    encoder = Encoder(retriever)
+    encoder = encoder
     if name is None:
         name = "triple_head"  # 只存储 head 部分，集合名称更改为 "head"
 
     embedding_function = encoder.ef
-    chroma_client = HttpClient(host='127.0.0.1', port=8000)
-    collection = chroma_client.create_collection(
+    chroma_client = await chromadb.AsyncHttpClient(host='127.0.0.1', port=8000)
+    collection = await chroma_client.create_collection(
         name=name,
         metadata={"hnsw:space": "cosine"},
         embedding_function=embedding_function,
@@ -484,7 +477,7 @@ def get_triples_head_collection_and_write(retriever: str, data: list = None, nam
 
     # 2. 准备数据，仅保留 head 部分
     retrieve_data = []
-    for triple in triple_data:
+    for triple in data:
         if "head" in triple and triple["head"] is not None:
             retrieve_data.append({"head": triple["head"]})
 
@@ -497,30 +490,39 @@ def get_triples_head_collection_and_write(retriever: str, data: list = None, nam
 
     # 3. 编码并写入数据库
     encoder_ = encoder.encoder
-    embeddings = encoder_.encode(docs, batch_size=64, show_progress_bar=True)
+    embeddings = await encoder_.encode(docs, batch_size=64, show_progress_bar=True, model=model)
+    if embeddings is None:
+        raise ValueError("编码器返回None嵌入")
     if not isinstance(embeddings, list):
         embeddings = embeddings.tolist()
+    
+    def safe_get_metadata(i):
+            return {
+                "head": retrieve_data[i]["head"],
+                "relation": retrieve_data[i].get("relation", ""),  # 防御性访问
+                "tail": retrieve_data[i].get("tail", "")
+            }
 
     # 分批添加数据，避免一次性写入过多数据
     if len(embeddings) > 20000:
         for i in range(0, len(embeddings), 20000):
-            collection.add(
+         await collection.add(
                 embeddings=embeddings[i: i + 20000],
                 documents=docs[i: i + 20000],
-                metadatas=[{"head": retrieve_data[i]["head"],"head": retrieve_data[j]["head"],"head": retrieve_data[j]["head"],} for j in range(i, min(len(embeddings), i + 20000))],
+                metadatas=[safe_get_metadata(j) for j in range(i, min(len(embeddings), i + 20000))],
                 ids=[str(j) for j in range(i, min(len(embeddings), i + 20000))],
             )
     else:
-        collection.add(
+        await collection.add(
             embeddings=embeddings,
             documents=docs,
-            metadatas=[{"head": retrieve_data[i]["head"]} for i in range(len(docs))],
+            metadatas=[safe_get_metadata(j) for j in range(len(docs))],
             ids=[str(i) for i in NanoIDGenerator(len(docs))],
         )
 
     return None
 
-def get_triples_relation_collection_and_write(retriever: str, triple_data: list = None, name: str = None, chroma_dir: str = None, value: str = None):
+async def get_triples_relation_collection_and_write(data: list = None, name: str = None, encoder = None):
     """
     仅将提取到的三元组数据中的 relation 部分写入数据库。
 
@@ -532,13 +534,13 @@ def get_triples_relation_collection_and_write(retriever: str, triple_data: list 
     """
     # 1. 初始化服务与编码器
     from chromadb import HttpClient
-    encoder = Encoder(retriever)
+    encoder = encoder
     if name is None:
         name = "triple_relation"  # 只存储 relation 部分，集合名称更改为 "relations"
 
     embedding_function = encoder.ef
-    chroma_client = HttpClient(host='127.0.0.1', port=8000)
-    collection = chroma_client.create_collection(
+    chroma_client = await chromadb.AsyncHttpClient(host='127.0.0.1', port=8000)
+    collection = await chroma_client.create_collection(
         name=name,
         metadata={"hnsw:space": "cosine"},
         embedding_function=embedding_function,
@@ -547,7 +549,7 @@ def get_triples_relation_collection_and_write(retriever: str, triple_data: list 
 
     # 2. 准备数据，仅保留 relation 部分
     retrieve_data = []
-    for triple in triple_data:
+    for triple in data:
         if "relation" in triple and triple["relation"] is not None:
             retrieve_data.append({"relation": triple["relation"]})
 
@@ -560,30 +562,39 @@ def get_triples_relation_collection_and_write(retriever: str, triple_data: list 
 
     # 3. 编码并写入数据库
     encoder_ = encoder.encoder
-    embeddings = encoder_.encode(docs, batch_size=64, show_progress_bar=True)
+    embeddings = await encoder_.encode(docs, batch_size=64, show_progress_bar=True)
+    if embeddings is None:
+        raise ValueError("编码器返回None嵌入")
     if not isinstance(embeddings, list):
         embeddings = embeddings.tolist()
+
+    def safe_get_metadata(i):
+            return {
+                "head": retrieve_data[i].get("head",""),
+                "relation": retrieve_data[i]["relation"],  # 防御性访问
+                "tail": retrieve_data[i].get("tail", "")
+            }
 
     # 分批添加数据，避免一次性写入过多数据
     if len(embeddings) > 20000:
         for i in range(0, len(embeddings), 20000):
-            collection.add(
+            await collection.add(
                 embeddings=embeddings[i: i + 20000],
                 documents=docs[i: i + 20000],
-                metadatas=[{"relation": retrieve_data[j]["relation"]} for j in range(i, min(len(embeddings), i + 20000))],
+                metadatas=[safe_get_metadata(j) for j in range(i, min(len(embeddings), i + 20000))],
                 ids=[str(j) for j in range(i, min(len(embeddings), i + 20000))],
             )
     else:
-        collection.add(
+        await collection.add(
             embeddings=embeddings,
             documents=docs,
-            metadatas=[{"relation": retrieve_data[i]["relation"]} for i in range(len(docs))],
+            metadatas=[safe_get_metadata(j) for j in range(len(docs))],
             ids=[str(i) for i in NanoIDGenerator(len(docs))],
         )
 
     return None
 
-def get_triples_tail_collection_and_write(retriever: str, triple_data: list = None, name: str = None, chroma_dir: str = None, value: str = None):
+async def get_triples_tail_collection_and_write(data: list = None, name: str = None, encoder = None):
     """
     仅将提取到的三元组数据中的 tail 部分写入数据库。
 
@@ -594,14 +605,13 @@ def get_triples_tail_collection_and_write(retriever: str, triple_data: list = No
         chroma_dir: chromadb 的工作目录（如有需要）
     """
     # 1. 初始化服务与编码器
-    from chromadb import HttpClient
-    encoder = Encoder(retriever)
+    encoder = encoder
     if name is None:
         name = "triple_tail"  # 只存储 tail 部分，集合名称更改为 "tails"
 
     embedding_function = encoder.ef
-    chroma_client = HttpClient(host='127.0.0.1', port=8000)
-    collection = chroma_client.create_collection(
+    chroma_client = await chromadb.AsyncHttpClient(host='127.0.0.1', port=8000)
+    collection = await chroma_client.create_collection(
         name=name,
         metadata={"hnsw:space": "cosine"},
         embedding_function=embedding_function,
@@ -610,7 +620,7 @@ def get_triples_tail_collection_and_write(retriever: str, triple_data: list = No
 
     # 2. 准备数据，仅保留 tail 部分
     retrieve_data = []
-    for triple in triple_data:
+    for triple in data:
         if "tail" in triple and triple["tail"] is not None:
             retrieve_data.append({"tail": triple["tail"]})
 
@@ -623,41 +633,118 @@ def get_triples_tail_collection_and_write(retriever: str, triple_data: list = No
 
     # 3. 编码并写入数据库
     encoder_ = encoder.encoder
-    embeddings = encoder_.encode(docs, batch_size=64, show_progress_bar=True)
+    embeddings = await encoder_.encode(docs, batch_size=64, show_progress_bar=True)
+    if embeddings is None:
+        raise ValueError("编码器返回None嵌入")
     if not isinstance(embeddings, list):
         embeddings = embeddings.tolist()
+    
+    def safe_get_metadata(i):
+            return {
+                "head": retrieve_data[i].get("head",""),
+                "relation": retrieve_data[i].get("relation",""),  # 防御性访问
+                "tail": retrieve_data[i]["tail"]
+            }
 
     # 分批添加数据，避免一次性写入过多数据
     if len(embeddings) > 20000:
         for i in range(0, len(embeddings), 20000):
-            collection.add(
+            await collection.add(
                 embeddings=embeddings[i: i + 20000],
                 documents=docs[i: i + 20000],
-                metadatas=[{"tail": retrieve_data[j]["tail"]} for j in range(i, min(len(embeddings), i + 20000))],
+                metadatas=[safe_get_metadata(j) for j in range(i, min(len(embeddings), i + 20000))],
                 ids=[str(j) for j in range(i, min(len(embeddings), i + 20000))],
             )
     else:
-        collection.add(
+        await collection.add(
             embeddings=embeddings,
             documents=docs,
-            metadatas=[{"tail": retrieve_data[i]["tail"]} for i in range(len(docs))],
+            metadatas=[safe_get_metadata(i) for i in range(len(docs))],
             ids=[str(i) for i in NanoIDGenerator(len(docs))],
         )
 
     return None
 
+async def get_qa_collection_and_write(data: list = None, name: str = None, encoder = None):
+    """
+    将问答对 (Q, A) 存入 ChromaDB。
 
+    参数：
+        retriever (str): 选择的编码器名称
+        data (list): 问答对数据，格式应为 [{"question": "Q1", "answer": "A1"}, ...]
+        name (str): 存储集合名称，默认 "qa_pairs"
+        chroma_dir (str): ChromaDB 存储目录（可选）
+    """
+    encoder = encoder
+    if name is None:
+        name = "qa_pairs"  # 存储问答对的集合名称
+    embedding_function = encoder.ef
+
+    chroma_client = await chromadb.AsyncHttpClient(host='127.0.0.1', port=8000)
+    collection = await chroma_client.create_collection(
+        name=name,
+        metadata={"hnsw:space": "cosine"},
+        embedding_function=embedding_function,
+        get_or_create=True,
+    )
+
+    # 2. 准备数据，仅保留有效的 Q/A
+    retrieve_data = []
+    for qa in data:
+        if "question" in qa and "answer" in qa and qa["question"] and qa["answer"]:
+            retrieve_data.append({"question": qa["question"], "answer": qa["answer"]})
+
+    if not retrieve_data:
+        print("未找到有效的 QA 数据，跳过写入 ChromaDB。")
+        return None
+
+    # 仅存储问题部分用于向量检索
+    docs = [item["question"] for item in retrieve_data]
+
+    # 3. 编码并写入数据库
+    encoder_ = encoder.encoder
+    embeddings = await encoder_.encode(docs, batch_size=64, show_progress_bar=True)
+    
+    if embeddings is None:
+        raise ValueError("编码器返回 None 嵌入")
+    if not isinstance(embeddings, list):
+        embeddings = embeddings.tolist()
+
+    def safe_get_metadata(i):
+        return {
+            "question": retrieve_data[i]["question"],
+            "answer": retrieve_data[i]["answer"]
+        }
+
+    # 分批添加数据，避免一次性写入过多数据
+    if len(embeddings) > 20000:
+        for i in range(0, len(embeddings), 20000):
+            await collection.add(
+                embeddings=embeddings[i: i + 20000],
+                documents=docs[i: i + 20000],
+                metadatas=[safe_get_metadata(j) for j in range(i, min(len(embeddings), i + 20000))],
+                ids=[str(j) for j in range(i, min(len(embeddings), i + 20000))],
+            )
+    else:
+        await collection.add(
+            embeddings=embeddings,
+            documents=docs,
+            metadatas=[safe_get_metadata(j) for j in range(len(docs))],
+            ids=[str(i) for i in NanoIDGenerator(len(docs))],
+        )
+
+    return None
 
 #获取qa_collection并存储prompt
-def get_summary_collection_and_write(retriever: str, summarydata, chunk_data, name: str = None, chroma_dir: str = None, chunk_id = None):
+async def get_summary_collection_and_write(summarydata, chunk_data, name: str = None, chunk_id = None, encoder=None):
 
 #1 起服务
-    encoder = Encoder(retriever)
+    encoder = encoder
     if name == None:
         name = "summary"
     
     embedding_function = encoder.ef
-    chroma_client = chromadb.HttpClient(host='127.0.0.1', port=8000)
+    chroma_client = await chromadb.AsyncHttpClient(host='127.0.0.1', port=8000)
     collection = chroma_client.create_collection(
         name=name,
         metadata={"hnsw:space": "cosine"},
@@ -703,15 +790,15 @@ def get_summary_collection_and_write(retriever: str, summarydata, chunk_data, na
         )
     return None
 
-def get_path_collection_and_write(retriever: str, path):
+async def get_path_collection_and_write(path, encoder):
     
 #1 起服务
-    encoder = Encoder(retriever)
+    encoder = encoder
     name = "path"
     
     embedding_function = encoder.ef
-    chroma_client = chromadb.HttpClient(host='127.0.0.1', port=8000)
-    collection = chroma_client.create_collection(
+    chroma_client = await chromadb.AsyncHttpClient(host='127.0.0.1', port=8000)
+    collection = await chroma_client.create_collection(
         name=name,
         metadata={"hnsw:space": "cosine"},
         embedding_function=embedding_function,
@@ -729,13 +816,13 @@ def get_path_collection_and_write(retriever: str, path):
     docs = [item["name"] for item in retrieve_data] #question list
     meta_keys = list(retrieve_data[0].keys())           #data中dict的keys
     #del meta_keys[meta_keys.index("question")] #删除question，只剩下content
-    embeddings = encoder_.encode(docs, batch_size=64, show_progress_bar=True)
+    embeddings = await encoder_.encode(docs, batch_size=64, show_progress_bar=True)
     if not isinstance(embeddings, list):
         embeddings = embeddings.tolist()
  
     if len(embeddings) > 20000:
         for i in range(0, len(embeddings), 20000):
-            collection.add(
+            await collection.add(
                 embeddings=embeddings[i : i + 20000],
                 documents=docs[i : i + 20000],
                 metadatas=[
@@ -745,7 +832,7 @@ def get_path_collection_and_write(retriever: str, path):
                 ids=[str(i) for i in range(i, min(len(embeddings), i + 20000))],
             )
     else:
-        collection.add(
+        await collection.add(
             embeddings=embeddings,
             documents=docs,
             metadatas=[
@@ -755,33 +842,33 @@ def get_path_collection_and_write(retriever: str, path):
         )
     return None
 
-def get_output_path(retriever: str, recall_num : int = 1):
-    encoder = Encoder(retriever)
+async def get_output_path(recall_num : int = 1, encoder=None):
+    encoder = encoder
     name = "path"
     
     embedding_function = encoder.ef
-    chroma_client =  chromadb.HttpClient(host='127.0.0.1', port=8000)
-    collection = chroma_client.create_collection(
+    chroma_client = await chromadb.AsyncHttpClient(host='127.0.0.1', port=8000)
+    collection = await chroma_client.create_collection(
         name=name,
         metadata={"hnsw:space": "cosine"},
         embedding_function=embedding_function,
         get_or_create=True,
     )
-    results_summary = collection.query(query_texts = name, n_results = recall_num)
+    results_summary = await collection.query(query_texts = name, n_results = recall_num)
     return results_summary
 
-def get_summary_collection_and_query_chunk(retriever: str, chunk_id = None):
+async def get_summary_collection_and_query_chunk(retriever: str, chunk_id = None, model=None):
     
-    encoder = Encoder(retriever)
+    encoder = Encoder(retriever,model=model)
     name = "summary"
     
     embedding_function = encoder.ef
-    chroma_client =  chromadb.HttpClient(host='127.0.0.1', port=8000)
-    collection = chroma_client.create_collection(
+    chroma_client = await chromadb.AsyncHttpClient(host='127.0.0.1', port=8000)
+    collection = await chroma_client.create_collection(
         name=name,
         metadata={"hnsw:space": "cosine"},
         embedding_function=embedding_function,
         get_or_create=True,
     )
-    qas_result = collection.get(where={"chunk_id": chunk_id})
+    qas_result = await collection.get(where={"chunk_id": chunk_id})
     return qas_result

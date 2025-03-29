@@ -106,6 +106,32 @@ def get_triples(text):
     triples = [[item.strip() for item in match] for match in matches]
     return triples
 
+
+
+def get_qa_pairs(text):
+    """
+    使用正则表达式从 GPT 生成的文本中提取问答对。
+    
+    参数：
+        text (str): GPT 返回的文本，包含多个 [问题, 答案] 格式的问答对
+    
+    返回：
+        list: 解析出的问答对列表，每个元素为 [问题, 答案] 的列表
+    """
+    # 定义正则表达式匹配：[ "问题", "答案" ]
+    pattern = r'\[\s*(.*?)\s*,\s*(.*?)\s*\]'
+    
+    # 使用 re.findall 提取所有匹配的问答对
+    matches = re.findall(pattern, text)
+    
+    # 结果转换成标准问答格式
+    qa_pairs = [[q.strip(), a.strip()] for q, a in matches]
+
+    return qa_pairs
+
+
+
+
 def get_chunk_id(result, chunk_ids):
     #transfer rerank string into chunk_id list
     matches = re.findall(r'\[.*?\]', result)

@@ -94,23 +94,29 @@ def ExtractKG(args, data):
         query_prompt = sllm.query_prompt.query_prompt(args, data)
         query_prompt.create_prompt(task="extract_triple")
         responses_triple = llm.get_response(query_prompt.naive_prompt)
+        #print(responses_triple)
         for response in responses_triple:
             try:
                 result = response.choices[0].message.content
                 # 假设返回的内容为形如 "[[head1, relation1, tail1], [head2, relation2, tail2], ...]" 的字符串，
                 # 通过自定义函数解析成列表形式
+                # 修改后的三元组处理逻辑
                 raw_triples = sllm.align.get_triples(result)
-                # 将每个三元组转换为字典形式存储
                 for triple in raw_triples:
                     if len(triple) == 3:
                         triple_dict = {
-                            "head": triple[0],
-                            "relation": triple[1],
-                            "tail": triple[2]
+                            "head": str(triple[0]).strip() if triple[0] else None,
+                            "relation": str(triple[1]).strip() if triple[1] else None,
+                            "tail": str(triple[2]).strip() if triple[2] else None
                         }
-                        triple_data.append(triple_dict)
+                        # 严格验证所有字段
+                        if all(triple_dict.values()):  # 确保没有None或空字符串
+                            triple_data.append(triple_dict)
+                        else:
+                            print(f"跳过无效三元组（存在空值）: {triple}")
                     else:
-                        print("解析得到的三元组长度不为 3:", triple)
+                        print(f"警告:忽略长度不为3的三元组: {triple}")
+                        
             except openai.BadRequestError as e:  # 非法输入
                 print(e)
                 total_num += 1
@@ -130,45 +136,125 @@ def ExtractKG(args, data):
                 print(f"提取三元组时出错: {e}")
                 total_num += 1
                 continue
-            flag = False
-
-    # 将提取的三元组数据写入数据库（如果还需要写入其他数据库可以保留此步骤）
-    #sllm.retrieve.get_triples_collection_and_write(args.encoder_model, triple_data=triple_data)
-
-    # 分别将三元组中的 head、relation、tail 存入 chromadb 中
-    for triple in triple_data:
-        try:
-            if triple is None:
-                print("警告: triple 为 None, 跳过处理")
-                continue
-            
-            # 确保所有字段存在且为非空字符串
-            head = triple.get("head")
-            if not head:  # 检查空字符串或None
-                print(f"跳过无效的三元组，缺少有效的 head: {triple}")
-                continue
-            
-            relation = triple.get("relation")
-            if not relation:
-                print(f"跳过无效的三元组，缺少有效的 relation: {triple}")
-                continue
-            
-            tail = triple.get("tail")
-            if not tail:
-                print(f"跳过无效的三元组，缺少有效的 tail: {triple}")
-                continue
-            
-            # 处理有效三元组
-            sllm.retrieve.get_triples_head_collection_and_write(args.encoder_model, data=head)
-            sllm.retrieve.get_triples_relation_collection_and_write(args.encoder_model, value=relation)
-            sllm.retrieve.get_triples_tail_collection_and_write(args.encoder_model, value=tail)
-        
-        except Exception as e:
-            print(f"写入 chromadb 时出错: {e}")
-            continue
-        
+      
+        for triple_dict in triple_data:
+            # 将字典转换回列表
+            restored_triple = [triple_dict["head"], triple_dict["relation"], triple_dict["tail"]]
+    
+            # 以一行字符串形式表示
+            triple_str = f"[{restored_triple[0]}, {restored_triple[1]}, {restored_triple[2]}]"
+            # 添加到 data 列表
+            data.append(triple_str)
+    print(len(data))
+    
+    sllm.retrieve.get_triples_head_collection_and_write(args.encoder_model, data=triple_data)
+    sllm.retrieve.get_triples_relation_collection_and_write(args.encoder_model, data=triple_data)
+    sllm.retrieve.get_triples_tail_collection_and_write(args.encoder_model, data=triple_data)
     # 如有需要，也将上下文数据存入数据库，便于后续检索
     # sllm.retrieve.get_context_collection_and_write(args.encoder_model, context_data=data)
 
     return triple_data
+
+async def ExtractKGQA(args, data, encoder):
+    """
+    1. 利用大模型对输入数据进行三元组提取，并以字典形式存储；
+    2. 利用大模型对输入数据进行 QA 问答对的提取；
+    3. 将三元组的 head、relation、tail 以及 QA 问答对分别存入 chromadb。
+    """
+    # 初始化语言模型（如 GPT 模型）
+    llm = sllm.llm.gpt(args)
+
+    # 存储三元组数据，每个元素为 {"head": value, "relation": value, "tail": value}
+    triple_data = []
+
+    # 存储 QA 问答对，每个元素为 {"question": value, "answer": value}
+    qa_data = []
+
+    total_num = 0  # 统计错误次数，防止死循环
+    max_retries = 3  # 最大重试次数
+    retry_count = 0
+
+    # === 1. 提取三元组 ===
+    flag = True
+    while flag and retry_count < max_retries:
+        retry_count += 1
+        query_prompt = sllm.query_prompt.query_prompt(args, data)
+        query_prompt.create_prompt(task="extract_triple")
+        responses_triple = llm.get_response(query_prompt.naive_prompt)
+
+        for response in responses_triple:
+            try:
+                result = response.choices[0].message.content
+                raw_triples = sllm.align.get_triples(result)
+                for triple in raw_triples:
+                    if len(triple) == 3:
+                        triple_dict = {
+                            "head": str(triple[0]).strip() if triple[0] else None,
+                            "relation": str(triple[1]).strip() if triple[1] else None,
+                            "tail": str(triple[2]).strip() if triple[2] else None
+                        }
+                        if all(triple_dict.values()):  # 确保三元组所有字段都有效
+                            triple_data.append(triple_dict)
+                        else:
+                            print(f"跳过无效三元组（存在空值）: {triple}")
+                    else:
+                        print(f"警告: 忽略长度不为3的三元组: {triple}")
+
+            except Exception as e:
+                print(f"提取三元组时出错: {e}")
+                total_num += 1
+                continue
+            flag = False
+
+    
+    for triple_dict in triple_data:
+        # 将字典转换回列表
+        restored_triple = [triple_dict["head"], triple_dict["relation"], triple_dict["tail"]]
+        # 以一行字符串形式表示
+        triple_str = f"[{restored_triple[0]}, {restored_triple[1]}, {restored_triple[2]}]"
+        # 添加到 data 列表
+        data.append(triple_str)
+
+
+    # === 2. 提取 QA 问答对 ===
+    retry_count = 0  # 重置重试计数
+    flag = True
+    while flag and retry_count < max_retries:
+        retry_count += 1
+        query_prompt = sllm.query_prompt.query_prompt(args, data)
+        query_prompt.create_prompt(task="extract_qa")
+        responses_qa = llm.get_response(query_prompt.naive_prompt)
+        for response in responses_qa:
+            try:
+                result = response.choices[0].message.content
+                raw_qa_pairs = sllm.align.get_qa_pairs(result)  
+                for qa_pair in raw_qa_pairs:
+                    if len(qa_pair) == 2:
+                        qa_dict = {
+                            "question": str(qa_pair[0]).strip() if qa_pair[0] else None,
+                            "answer": str(qa_pair[1]).strip() if qa_pair[1] else None
+                        }
+                        if all(qa_dict.values()):  # 确保 Q & A 都有效
+                            qa_data.append(qa_dict) 
+                        else:
+                            print(f"跳过无效问答对（存在空值）: {qa_pair}")
+                    else:
+                        print(f"警告: 忽略长度不为2的问答对: {qa_pair}")
+            except Exception as e:
+                print(f"提取 QA 问答对时出错: {e}")
+                total_num += 1
+                continue
+            flag = False
+
+    # === 3. 写入 chromadb ===
+
+        # 分别存储 head、relation、tail
+    await sllm.retrieve.get_triples_head_collection_and_write(data=triple_data, encoder = encoder)
+    await sllm.retrieve.get_triples_relation_collection_and_write(data=triple_data, encoder = encoder)
+    await sllm.retrieve.get_triples_tail_collection_and_write(data=triple_data, encoder = encoder)
+
+        # 存储 QA 问答对
+    await sllm.retrieve.get_qa_collection_and_write(data=qa_data, encoder = encoder)
+
+    return triple_data, qa_data
 
