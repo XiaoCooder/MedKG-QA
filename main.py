@@ -20,58 +20,6 @@ def check_path(path):
     if not os.path.exists(d):
         os.makedirs(d)
 
-def merge(num):
-    args.
-
-# 批量处理访谈数据，进行清理并提取问答对
-def InterviewProcess(args,Data,Cha,Names,Descriptions):
-                
-                if not args.debug:
-                    try:
-                        for i in range(len(Data) // args.batch_size + (1 if len(Data) % args.batch_size != 0 else 0)):
-                          start_index = i * args.batch_size
-                          end_index = min(start_index + args.batch_size, len(Data))  # 确保不超过总长度
-                          # 提取一个批次
-                          subData = Data[start_index:end_index]
-                          subCha = Cha[start_index:end_index]
-                          print(f"*************chunk {i}*************\n")
-                          cleaned_data, qa_data, summary_data = sllm.Interview.Interview(args,subData,subCha,Names,Descriptions)
-                    except Exception as e:    
-                        if args.store_error:
-                            pass
-
-                else:
-                    cleaned_path = os.path.join(args.output_path, 'cleaned_text.txt')
-                    qa_path = os.path.join(args.output_path, 'qa_pairs.txt')
-                    summary_path = os.path.join(args.output_path, 'summary.txt')
-                    check_path(cleaned_path)
-                    num_batches = len(Data) // args.batch_size + (1 if len(Data) % args.batch_size != 0 else 0)
-                    for i in tqdm(range(num_batches), desc="Processing batches"):
-                          start_index = i * args.batch_size
-                          end_index = min(start_index + args.batch_size, len(Data))  # 确保不超过总长度
-                          # 提取一个批次
-                          subData = Data[start_index:end_index]
-                          subCha = Cha[start_index:end_index]
-                          #print(f"chunk {i}")
-                          cleaned_data, qa_data, summary_data = sllm.Interview.Interview(args,subData,subCha,Names,Descriptions,i)
-                          #save chunk
-                          with open(cleaned_path, 'a') as fout:
-                                 fout.write(f"*************chunk {i}*************\n")
-                          with open(qa_path, 'a') as fout:
-                                 fout.write(f"*************chunk {i}*************\n")
-                          with open(summary_path, 'a') as fout:
-                                 fout.write(f"*************chunk {i}*************\n")
-
-                          for i in range(len(cleaned_data)):
-                            with open(cleaned_path, 'a') as fout:
-                                 fout.write(cleaned_data[i])
-                          for idx,element in enumerate(qa_data):
-                            n,q,a = element
-                            with open(qa_path, 'a') as fout:
-                                 fout.write(f"Question {idx}"+" "+n+":"+q+" Answer:"+a+"\n")
-                          with open(summary_path, 'a') as fout:
-                                 fout.write(summary_data+"\n")
-
 # 批量处理数据以提取知识图谱
 async def KGProcess(args, Data, idx, api_key , encoder):
     
@@ -125,43 +73,6 @@ async def KGProcess(args, Data, idx, api_key , encoder):
                                 fout.write(f"*************chunk {i}*************\n")
                                 for qa in qa_data:
                                     fout.write(f"Q: {qa['question']}\nA: {qa['answer']}\n\n")  # 问答对格式化                          
-                          
-                          
-                          
-# 读取并解析访谈数据为说话人轮次
-def InterviewRead(args):
-    print('load Inteview data...')
-    with open(args.data_path, "r", encoding="utf8") as fin:
-        lines = fin.readlines()
-    data = []  # 用来存储说话人的内容
-    character = []  # 用来存储说话人的序号
-    speaker = None  # 当前说话人
-    content = ""  # 当前发言内容
-
-    # 正则表达式：提取说话人编号和时间戳
-    speaker_pattern = re.compile(r"说话人(\d)")
-
-    # 逐行分析文件内容
-    for line in lines:
-        line = line.strip()  # 去掉行首尾的空格和换行符
-        # 如果是一个新的说话人，记录当前发言并准备处理新的发言
-        match = speaker_pattern.match(line)
-        if match:
-            if speaker is not None:  # 如果之前有说话人，保存之前的内容
-                data.append(content.strip())
-                character.append(speaker)
-            speaker = int(match.group(1))  # 更新当前说话人
-            content = ""  # 重置内容
-            #print(f"Matched Speaker: {speaker}")
-        else:
-            content += line + " "
-
-    # 最后一条内容处理（文件结束时）
-    if speaker is not None:
-        data.append(content.strip())
-        character.append(speaker)
-    print(f"length of Interview : {len(data)}")
-    return data,character
 
 # 读取并解析文本数据为完整句子
 def TxtRead(args):
@@ -196,7 +107,6 @@ def TxtRead(args):
 
     print(f"文本共 {len(sentences)} 个完整句子")
     return sentences
-
 
 # 解析应用程序的命令行参数
 def parse_args():
@@ -240,30 +150,7 @@ def parse_args():
     args = parser.parse_args()
     return args
 
-# 从文件中读取并解析角色描述
-def CharacterRead(args):
-    # 用于存储名字和描述
-    names = []
-    descriptions = []
-    
-    # 正则表达式：提取名字和描述（假设格式为 '名字: 描述'）
-    pattern = re.compile(r'([^:]+):\s*(.+)')
-
-    # 逐行读取文件
-    with open(args.character_path, "r", encoding="utf8") as fin:
-        for line in fin:
-            line = line.strip()  # 去掉首尾空格和换行符
-
-            # 使用正则表达式匹配
-            match = pattern.match(line)
-            if match:
-                name = match.group(1)  # 提取名字
-                description = match.group(2)  # 提取描述
-                names.append(name)
-                descriptions.append(description)
-    print(f"Number of Speakers : {len(names)-1}")
-    return names, descriptions
-
+# 合并多线程产生的
 def merge_chunks(args, split_sizes):
     """
     合并分块文件并恢复原始顺序

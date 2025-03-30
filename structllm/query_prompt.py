@@ -157,8 +157,7 @@ class query_prompt():
                 )
          except json.JSONDecodeError as e:
              #print(f"JSON 解码错误: {e}")
-             pass
-         
+             pass      
 
     def add_query_Prompt(self, data, character=None , names = None, question=None):
         if isinstance(data, list):
@@ -170,34 +169,7 @@ class query_prompt():
         return Prompt
     
     def add_ask_Prompt(self, data, question, task):
-        if task == "summary_rerank":
-           Prompt = "the question is:" + question
-           task_prompt = "\nThe following are summaries of several paragraphs. \nSort the paragraphs that are most likely to have an answer based on the question \nreturn an array as format, and put the most possible answer first, for example: [0, 2, 1]"   
-           Prompt = Prompt + task_prompt
-           for i in range(len(data)):
-              Prompt = Prompt + f"\nparagraph{i}" + data[i]
 
-        if task == "qas_rerank":
-           Prompt = "the question is:" + question
-           task_prompt = "\nThe following are several questions. \nSort the questions that are most similar to the given question.\nreturn an array as format, and put the most possible question number first, for example: [0, 2, 1]"   
-           Prompt = Prompt + task_prompt
-           for i in range(len(data)):
-              Prompt = Prompt + f"\nparagraph{i}" + data[i]
-
-        if task == "context_rerank":
-           Prompt = "the question is:" + question
-           task_prompt = "\nHere are some conversation contents, and the answers to the question come from the conversation. Please provide me with the relevance between the sequence number of the conversation content and the questions. \nreturn an array as format, and put the most possible answer first, for example: [0, 2, 1]"   
-           Prompt = Prompt + task_prompt
-           for i in range(len(data)):
-              Prompt = Prompt + f"\nconversation{i}:" + data[i]
-
-        if task == "get_answer":
-            task_prompt = f"I need you to answer the question: {question}\n"   
-            data_prompt = ''
-            for i in range(len(data)):
-               data_prompt = data_prompt + data[i]
-            Prompt = task_prompt + data_prompt
-        
         if task == "extract_triple": 
             data_prompt = ''  
             for i in range(len(data)):

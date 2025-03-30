@@ -5,11 +5,6 @@ from sentence_transformers import SentenceTransformer,util
 import torch
 import re
 import json
-
-class align:
-    def __init__(self,args):
-        self.args = args
-        context_data, cleaned_data, summary_data = [], [], []
            
 class SentenceBertRetriever:
     def __init__(self, corpus) -> None:
@@ -106,8 +101,6 @@ def get_triples(text):
     triples = [[item.strip() for item in match] for match in matches]
     return triples
 
-
-
 def get_qa_pairs(text):
     """
     使用正则表达式从 GPT 生成的文本中提取问答对。
@@ -128,9 +121,6 @@ def get_qa_pairs(text):
     qa_pairs = [[q.strip(), a.strip()] for q, a in matches]
 
     return qa_pairs
-
-
-
 
 def get_chunk_id(result, chunk_ids):
     #transfer rerank string into chunk_id list

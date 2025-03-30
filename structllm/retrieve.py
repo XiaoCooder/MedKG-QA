@@ -237,8 +237,9 @@ async def get_qas_collection_and_write(qa_data: list = None, name: str = None , 
     return None
 
 #获取qas_collection并查询top K
-def get_qas_collection_and_query(retriever: str , name: str = None ,chroma_dir: str = None ,query_texts: str = None ,recall_num : int = None,model=None):
-    encoder = Encoder(retriever,model=model)
+def get_qas_collection_and_query(name: str = None, query_texts: str = None ,recall_num : int = None, encoder = None):
+    
+    encoder = encoder
     if name == None:
         name = "qas"
     
