@@ -12,7 +12,6 @@ class SentenceBertRetriever:
         self.device = "cuda:0" if torch.cuda.is_available() else "cpu"
         # cuda_device = os.environ.get('CUDA_VISIBLE_DEVICES', '0')
         # self.device = f"cuda:{cuda_device}" if torch.cuda.is_available() else "cpu"
-        print(f"retrieve device:{self.device}")
         self.retrieve_model = SentenceTransformer(
             'MiniCPM-Embedding-Light',
             device=self.device ,
@@ -124,7 +123,16 @@ def get_qa_pairs(text):
     return qa_pairs
 
 def get_keywords(text):
-    pattern = r'\[\s*(.*?)\s*,\s*(.*?)\s*\]'
+    pattern = r'\[["\'](.*?)["\'],\s*([a-zA-Z]+)\]'
+    
+    matches = re.findall(pattern, text)
+    flattened = []
+    for keyword, k_type in matches:
+        # 处理转义引号（如果存在）
+        keyword = keyword.replace(r'\"', '"').replace(r"\'", "'")
+        flattened.extend([keyword, k_type.lower()])
+    
+    return flattened
 
 def get_chunk_id(result):
     #transfer rerank string into chunk_id list

@@ -319,22 +319,19 @@ async def main():
             else:
                 num_each_split = int(len(data) / args.num_process)
                 split_data = []
-                split_size = []
                 for idx in range(args.num_process):
                         start = idx * num_each_split
                         if idx == args.num_process - 1:
                             end = max((idx + 1) * num_each_split, len(data))
                             split_data.append(data[start:end])
-                            split_size.append(end-start+1)
                         else:
                             end = (idx + 1) * num_each_split
                             split_data.append(data[start:end])
-                            split_size.append(end-start+1)
                 async with Pool() as pool:
                         tasks = [pool.apply(KGProcess, args=(args, split_data[idx], idx, all_keys[idx], encoder)) for idx in range(args.num_process)]
                         await asyncio.gather(*tasks)
                 #merge txt
-                #merge_chunks(args, split_size)
+                #merge_chunks(args)
             
             #Q&A system
             await sllm.retrieve.get_path_collection_and_write(path = args.output_path ,encoder=encoder)
