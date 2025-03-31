@@ -14,8 +14,9 @@ class SentenceBertRetriever:
         # self.device = f"cuda:{cuda_device}" if torch.cuda.is_available() else "cpu"
         print(f"retrieve device:{self.device}")
         self.retrieve_model = SentenceTransformer(
-            'xiaobu-embedding-v2',
-            device=self.device
+            'MiniCPM-Embedding-Light',
+            device=self.device ,
+            trust_remote_code=True,
         )
         self.corpus = corpus
 
@@ -122,7 +123,7 @@ def get_qa_pairs(text):
 
     return qa_pairs
 
-def get_chunk_id(result, chunk_ids):
+def get_chunk_id(result):
     #transfer rerank string into chunk_id list
     matches = re.findall(r'\[.*?\]', result)
     #import pdb; pdb.set_trace()

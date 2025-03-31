@@ -157,7 +157,21 @@ class query_prompt():
                 )
          except json.JSONDecodeError as e:
              #print(f"JSON 解码错误: {e}")
-             pass      
+             pass
+
+        elif task == "extract_keywords":
+         try:
+           with open(args.extract_keywords,'r',encoding = 'utf-8') as json_file:
+                self.naive_prompt = json.load(json_file)
+                self.naive_prompt.append(
+                         {
+                             "role": "user",
+                             "content": self.add_ask_Prompt(self.data, question, task)
+                         }
+                )
+         except json.JSONDecodeError as e:
+             #print(f"JSON 解码错误: {e}")
+             pass   
 
     def add_query_Prompt(self, data, character=None , names = None, question=None):
         if isinstance(data, list):
@@ -183,6 +197,14 @@ class query_prompt():
                task_prompt = f"I need you to extract Q&A pairs from the following:{data[i]}\n"
                data_prompt = data_prompt + task_prompt
             Prompt = data_prompt
+        
+        if task == "extract_qa": 
+            data_prompt = ''  
+            for i in range(len(data)):
+               task_prompt = f"I need you to extract Q&A pairs from the following:{data[i]}\n"
+               data_prompt = data_prompt + task_prompt
+            Prompt = data_prompt
+            
         return Prompt
     
    
