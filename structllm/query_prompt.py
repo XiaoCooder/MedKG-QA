@@ -198,13 +198,13 @@ class query_prompt():
                data_prompt = data_prompt + task_prompt
             Prompt = data_prompt
         
-        if task == "extract_qa": 
+        if task == "extract_keywords": 
             data_prompt = ''  
             for i in range(len(data)):
-               task_prompt = f"I need you to extract Q&A pairs from the following:{data[i]}\n"
+               task_prompt = f"I need you to extract keywords from the following:{data[i]}\n"
                data_prompt = data_prompt + task_prompt
             Prompt = data_prompt
-            
+
         return Prompt
     
    

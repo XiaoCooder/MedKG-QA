@@ -123,6 +123,9 @@ def get_qa_pairs(text):
 
     return qa_pairs
 
+def get_keywords(text):
+    pattern = r'\[\s*(.*?)\s*,\s*(.*?)\s*\]'
+
 def get_chunk_id(result):
     #transfer rerank string into chunk_id list
     matches = re.findall(r'\[.*?\]', result)
