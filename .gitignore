@@ -1,6 +1,6 @@
 chroma.log
 output/
-chromadb/SentenceBERT/interview/
+chromadb
 input/
 api_key.txt
 MiniCPM-Embedding-Light
