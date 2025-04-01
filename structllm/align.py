@@ -123,16 +123,27 @@ def get_qa_pairs(text):
     return qa_pairs
 
 def get_keywords(text):
-    pattern = r'\[["\'](.*?)["\'],\s*([a-zA-Z]+)\]'
+    """
+    使用正则表达式从大模型返回的文本中提取关键词及其类别，返回格式：[["糖尿病", "head", "病因", "relation", "", "tail"], [...]]
     
+    :param text: 原始文本，例如：
+        "[['糖尿病', 'head'], ['病因', 'relation'], ['', 'tail']], [['糖尿病', 'head'], ['引起', 'relation'], ['肾病', 'tail']]"
+    
+    :return: 提取的关键词列表，例如：
+        [['糖尿病', 'head', '病因', 'relation', '', 'tail'], ['糖尿病', 'head', '引起', 'relation', '肾病', 'tail']]
+    """
+    # 匹配 [['关键词', '类型'], ['关键词', '类型'], ...]
+    pattern = r"\[\s*\['(.*?)',\s*'(\w+)'\](?:,\s*\['(.*?)',\s*'(\w+)'\])?(?:,\s*\['(.*?)',\s*'(\w+)'\])?\s*\]"
+
+    # 找到所有匹配项
     matches = re.findall(pattern, text)
-    flattened = []
-    for keyword, k_type in matches:
-        # 处理转义引号（如果存在）
-        keyword = keyword.replace(r'\"', '"').replace(r"\'", "'")
-        flattened.extend([keyword, k_type.lower()])
-    
-    return flattened
+
+    # 处理结果，确保返回 ['xxx', 'head', 'xxx', 'relation', 'xxx', 'tail'] 的格式
+    extracted_keywords = []
+    for match in matches:
+        extracted_keywords.append([match[0], match[1], match[2], match[3], match[4], match[5]])
+
+    return extracted_keywords
 
 def get_chunk_id(result):
     #transfer rerank string into chunk_id list

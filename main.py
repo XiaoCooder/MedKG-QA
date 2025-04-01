@@ -39,7 +39,13 @@ async def KGProcess(args, Data, idx, api_key , encoder):
                 
                 if not args.debug:
                     try:
-                          triple_data, qa_data= await sllm.ExtractKG.ExtractKGQA(args,Data,encoder)
+                        for i in range(len(Data) // args.batch_size + (1 if len(Data) % args.batch_size != 0 else 0)):
+                          start_index = i * args.batch_size
+                          end_index = min(start_index + args.batch_size, len(Data))  # 确保不超过总长度
+                          # 提取一个批次
+                          subData = Data[start_index:end_index]
+                          print(f"*************chunk {i}*************\n")
+                          triple_data, qa_data= await sllm.ExtractKG.ExtractKGQA(args,subData,encoder)
                     except Exception as e:    
                         if args.store_error:
                             pass
@@ -49,15 +55,24 @@ async def KGProcess(args, Data, idx, api_key , encoder):
                     qa_data_path = os.path.join(output_path, 'qa_pairs.txt')
                     check_path(triple_data_path)
                     check_path(qa_data_path)
+                    num_batches = len(Data) // args.batch_size + (1 if len(Data) % args.batch_size != 0 else 0)
                     
-                    triple_data, qa_data = await sllm.ExtractKG.ExtractKGQA(args, Data, encoder)
+                    for i in tqdm(range(num_batches), desc = describe):
+                        start_index = i * args.batch_size
+                        end_index = min(start_index + args.batch_size, len(Data))  # 确保不超过总长度
+                          # 提取一个批次
+                        subData = Data[start_index:end_index]
+                        
+                        triple_data, qa_data = await sllm.ExtractKG.ExtractKGQA(args, subData, encoder)
                         #save chunk
-                    with open(triple_data_path, 'a', encoding='utf-8') as fout:
-                            for triple in triple_data:
-                                fout.write(f"[{triple['head']}, {triple['relation']}, {triple['tail']}]\n") 
-                    with open(qa_data_path, 'a', encoding='utf-8') as fout:
-                            for qa in qa_data:
-                                fout.write(f"Q: {qa['question']}\nA: {qa['answer']}\n\n")  # 问答对格式化                          
+                        with open(triple_data_path, 'a', encoding='utf-8') as fout:
+                                fout.write(f"*************chunk {i}*************\n")
+                                for triple in triple_data:
+                                    fout.write(f"[{triple['head']}, {triple['relation']}, {triple['tail']}]\n") 
+                        with open(qa_data_path, 'a', encoding='utf-8') as fout:
+                                fout.write(f"*************chunk {i}*************\n")
+                                for qa in qa_data:
+                                    fout.write(f"Q: {qa['question']}\nA: {qa['answer']}\n\n")  # 问答对格式化                          
 
 # 读取并解析文本数据为完整句子
 def TxtRead(args):
@@ -137,7 +152,7 @@ def parse_args():
     return args
 
 # 合并多线程产生的
-def merge_chunks(args, split_sizes):
+def merge_chunks(args):
     """
     合并分块文件并恢复原始顺序
     
@@ -146,8 +161,6 @@ def merge_chunks(args, split_sizes):
     :param split_sizes: 每个分块的行数列表
     """
     # 确保split_sizes是整数列表
-    split_sizes = [int(size) for size in split_sizes]
-    chunk_num = len(split_sizes)
     data = []
     # 读取所有分块文件内容
     for i in range(chunk_num):
@@ -177,104 +190,6 @@ def merge_chunks(args, split_sizes):
         split_sizes=split_sizes
     )
 
-def load_triples(path: str):
-    """
-    从triples.txt文件中加载三元组 并删除类似"*************chunk {i}*************"的分块标记
-    
-    参数:
-        path: 文件路径(如'triples.txt')
-        
-    返回:
-        三元组列表，格式为[(head, relation, tail), ...]
-    """
-    triples_path = os.path.join(path, "triples.txt")
-    triples_head_set, triples_relation_set, triples_tail_set = set()
-    triples_list = []
-    chunk_pattern = "***"
-    if not os.path.exists(triples_path):
-        raise FileNotFoundError(f"triples.txt 不存在于路径: {path}")
-    
-    try:
-        with open(triples_path, 'r', encoding='utf-8') as f:
-            for line in f:
-                line = line.strip()
-                # 跳过空行和分块标记行
-                if not line or line.startswith(chunk_pattern):
-                    continue
-                
-                # 假设每行格式为"head\trelation\ttail"
-                parts = line.split('\t')
-                if len(parts) == 3:
-                    triples_list.append((parts[0], parts[1], parts[2]))
-                    triples_head_set.add(parts[0])
-                    triples_relation_set.add(parts[1])
-                    triples_tail_set.add(parts[2])
-    except Exception as e:
-        print(f"读取文件时出错: {e}")
-    
-    triples_head_list = list(dict.fromkeys([t[0] for t in triples_list]))
-    triples_relation_list = list(dict.fromkeys([t[1] for t in triples_list]))
-    triples_tail_list = list(dict.fromkeys([t[2] for t in triples_list]))
-    
-    return triples_list, triples_head_list, triples_relation_list, triples_tail_list
-
-def match_and_find_triples(path, keywords_data):
-    """
-    遍历 keywords_data 使用 SentenceBertRetriever 在 triples_list 中匹配合适的三元组。
-
-    参数：
-        path (str): 三元组数据的路径
-        keywords_data (list of dict): 关键词列表，每个元素格式如下：
-            [
-                {"keyword_head": "xxx", "keyword_relation": "xxx", "keyword_tail": "xxx"},
-                {"keyword_head": "yyy", "keyword_relation": "yyy", "keyword_tail": "yyy"},
-                ...
-            ]
-
-    返回：
-        list: 匹配到的所有三元组
-    """
-
-    # 加载三元组数据
-    triples_list, triples_head_list, triples_relation_list, triples_tail_list = load_triples(path)
-
-    # 初始化匹配器
-    keywords_head_match = sllm.align.SentenceBertRetriever(triples_head_list)
-    keywords_relation_match = sllm.align.SentenceBertRetriever(triples_relation_list)
-    keywords_tail_match = sllm.align.SentenceBertRetriever(triples_tail_list)
-
-    matched_triples = []  # 存放匹配到的三元组
-
-    # 遍历 keywords_data 中的每个关键词字典
-    for keywords in keywords_data:
-        matched_head, matched_relation, matched_tail = None, None, None
-
-        if keywords["keyword_head"]:  
-            head_index = keywords_head_match.get_topk_candidates(1, keywords["keyword_head"])
-            if head_index is not None and 0 <= head_index < len(triples_head_list):
-                matched_head = triples_head_list[head_index]
-
-        if keywords["keyword_relation"]:  
-            relation_index = keywords_relation_match.get_topk_candidates(1, keywords["keyword_relation"])
-            if relation_index is not None and 0 <= relation_index < len(triples_relation_list):
-                matched_relation = triples_relation_list[relation_index]
-
-        if keywords["keyword_tail"]:  
-            tail_index = keywords_tail_match.get_topk_candidates(1, keywords["keyword_tail"])
-            if tail_index is not None and 0 <= tail_index < len(triples_tail_list):
-                matched_tail = triples_tail_list[tail_index]
-
-        for triple in triples_list:
-            head, relation, tail = triple
-            if (matched_head is None or matched_head == head) and \
-               (matched_relation is None or matched_relation == relation) and \
-               (matched_tail is None or matched_tail == tail):
-                matched_triples.append(triple)  # 记录匹配到的三元组
-                break  # 只匹配一个，避免重复
-
-    return matched_triples  # 返回所有匹配到的三元组
-
-
 
       
 # 应用程序的主入口
@@ -286,8 +201,10 @@ async def main():
             all_keys = f.readlines()
             all_keys = [line.strip('\n') for line in all_keys]
             assert len(all_keys) >= args.num_process, (len(all_keys), args.num_process)
+    
     encoder = sllm.retrieve.Encoder(args.encoder_model)
     flag =True
+
     while (True):
         if (flag):
             user_input = input("I noticed that there is already data in your database. \nDo you need to open the Q&A directly? \nIf not, I will process the new input data\n").strip().lower()
@@ -342,8 +259,12 @@ async def main():
         elif user_input == "yes":
 
             #Q&A system
-            path = [candidate_content.get('path') for candidate_content in await sllm.retrieve.get_output_path(encoder=encoder)['metadatas'][0]][0]
-            triples_list, triples_head_list, triples_relation_list, triples_tail_list = load_triples(path)
+            response = await sllm.retrieve.get_output_path(encoder=encoder)  # 先 await 获取返回值
+            path = [candidate_content.get('path') for candidate_content in response['metadatas'][0]][0]
+
+            qa_pairs_path = '/home/wcy/code/KG-MedQA-v1.0/output/ceshi/llm-deepseek-chat__SentenceBERT__bs-10__20250331_201025/qa_pairs.txt'
+ 
+            import pdb;pdb.set_trace()
             
             args.qa_output_path = os.path.join(path, 'qa_history.txt')
             print(args.qa_output_path)

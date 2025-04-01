@@ -5,16 +5,16 @@ task_name=processed_Interview
 GPU=1
 
 model=deepseek-chat
-input=zhongyituina
+input=ceshi
 encoder_model=SentenceBERT
 batch_size=10
-p=5
+p=1
 args=$@
 
 CUDA_VISIBLE_DEVICES=$GPU python main.py \
---key api_key.txt \
+--key sk-e5c6b53b47694c6fbf94098c9678daeb \
 --openai_url https://api.deepseek.com/v1 \
---data_path input/zhongyituina.txt \
+--data_path input/ceshi.txt \
 --model ${model} \
 --clean_prompt_path structllm/prompt_/clean_prompt.json \
 --extract_q_prompt_path structllm/prompt_/extract_q_prompt.json \
