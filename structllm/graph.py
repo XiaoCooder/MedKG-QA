@@ -6,13 +6,11 @@ import openai
 import os
 
 
-
-
-def extract_keywords(args,qa_pairs_path):
+def extract_keywords(args,path):
     """
     利用大模型对输入数据进行关键词提取
     """
-    questions = extract_questions_from_txt(qa_pairs_path)
+    questions = extract_questions_from_txt(path)
     llm = sllm.llm.gpt(args)
     keywords_data = []
     total_num = 0
@@ -76,28 +74,71 @@ def extract_keywords(args,qa_pairs_path):
     return keywords_data
 
 
-def extract_questions_from_txt(file_path):
-    """
-    从txt格式的问答对文件中提取所有问题
+# def extract_questions_from_txt(file_path):
+#     """
+#     从txt格式的问答对文件中提取所有问题
     
-    参数:
-        file_path: txt文件路径
+#     参数:
+#         file_path: txt文件路径
         
-    返回:
-        问题列表
+#     返回:
+#         问题列表
+#     """
+#     questions = []
+    
+#     with open(file_path, 'r', encoding='utf-8') as f:
+#         current_line = f.readline()
+#         while current_line:
+#             if current_line.startswith('Q:'):
+#                 # 提取问题内容（去除"问题："前缀和换行符）
+#                 question = current_line[2:].strip()
+#                 questions.append(question)
+#             current_line = f.readline()
+    
+#     return questions
+
+def split_qa_pairs(file_path):
     """
+    读取 qa_pairs.txt，并将问题和答案分开存入 questions.txt 和 answers.txt
+
+    参数：
+        file_path (str): qa_pairs.txt 的路径
+
+    返回：
+        tuple: (questions.txt 路径, answers.txt 路径)
+    """
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"文件 {file_path} 不存在")
+
     questions = []
+    answers = []
     
-    with open(file_path, 'r', encoding='utf-8') as f:
-        current_line = f.readline()
-        while current_line:
-            if current_line.startswith('Q:'):
-                # 提取问题内容（去除"问题："前缀和换行符）
-                question = current_line[2:].strip()
-                questions.append(question)
-            current_line = f.readline()
-    
-    return questions
+    # 读取 qa_pairs.txt
+    with open(file_path, "r", encoding="utf-8") as f:
+        lines = f.readlines()
+
+    # 解析 Q 和 A
+    for line in lines:
+        line = line.strip()
+        if line.startswith("Q: "):
+            questions.append(line[3:].strip())  # 去掉 "Q: "
+        elif line.startswith("A: "):
+            answers.append(line[3:].strip())  # 去掉 "A: "
+
+    # 生成新文件路径
+    base_dir = os.path.dirname(file_path)
+    questions_path = os.path.join(base_dir, "questions.txt")
+    answers_path = os.path.join(base_dir, "answers.txt")
+
+    # 写入 questions.txt
+    with open(questions_path, "w", encoding="utf-8") as fq:
+        fq.write("\n".join(questions))
+
+    # 写入 answers.txt
+    with open(answers_path, "w", encoding="utf-8") as fa:
+        fa.write("\n".join(answers))
+
+    return questions_path, answers_path
 
 def load_triples(path):
     triples_path = os.path.join(path, "triples.txt")
@@ -213,20 +254,22 @@ def match_and_find_triples(path, keywords_data):
 
 
 def triplesProcess(args, path, qa_pairs_path):
+    output_path = args.output_path
     keywords_data = extract_keywords(args,qa_pairs_path)
     matched_triples = match_and_find_triples(path, keywords_data)
-
-    if not args.debug:
-        try:
-            for i in range(len(matched_triples) // args.batch_size + (1 if len(matched_triples) % args.batch_size != 0 else 0)):
-                start_index = i * args.batch_size
-                end_index = min(start_index + args.batch_size, len(matched_triples))  # 确保不超过总长度
-                # 提取一个批次
-                subData = matched_triples[start_index:end_index]
+    matched_triples_path = os.path.join(output_path, 'matched_triples.txt')
+    try:
+        with open(matched_triples_path, 'a', encoding='utf-8') as fout:
+            # 写入每个三元组
+            for triple in matched_triples:
+                head, relation, tail = triple
+                fout.write(f"[{head}, {relation}, {tail}]\n")  
                 
-        except Exception as e:    
-            if args.store_error:
-                pass
+    except Exception as e:
+        print(f"写入文件失败: {e}")
+        raise
+
+    
     
 
 

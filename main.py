@@ -261,9 +261,8 @@ async def main():
             #Q&A system
             response = await sllm.retrieve.get_output_path(encoder=encoder)  # 先 await 获取返回值
             path = [candidate_content.get('path') for candidate_content in response['metadatas'][0]][0]
-
             qa_pairs_path = '/home/wcy/code/KG-MedQA-v1.0/output/ceshi/llm-deepseek-chat__SentenceBERT__bs-10__20250331_201025/qa_pairs.txt'
- 
+            sllm.graph.triplesProcess(args, path, qa_pairs_path)
             import pdb;pdb.set_trace()
             
             args.qa_output_path = os.path.join(path, 'qa_history.txt')
