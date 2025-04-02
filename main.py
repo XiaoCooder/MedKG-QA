@@ -44,7 +44,6 @@ async def KGProcess(args, Data, idx, api_key , encoder):
                           end_index = min(start_index + args.batch_size, len(Data))  # 确保不超过总长度
                           # 提取一个批次
                           subData = Data[start_index:end_index]
-                          print(f"*************chunk {i}*************\n")
                           triple_data, qa_data= await sllm.ExtractKG.ExtractKGQA(args,subData,encoder)
                     except Exception as e:    
                         if args.store_error:
@@ -66,11 +65,9 @@ async def KGProcess(args, Data, idx, api_key , encoder):
                         triple_data, qa_data = await sllm.ExtractKG.ExtractKGQA(args, subData, encoder)
                         #save chunk
                         with open(triple_data_path, 'a', encoding='utf-8') as fout:
-                                fout.write(f"*************chunk {i}*************\n")
                                 for triple in triple_data:
                                     fout.write(f"[{triple['head']}, {triple['relation']}, {triple['tail']}]\n") 
                         with open(qa_data_path, 'a', encoding='utf-8') as fout:
-                                fout.write(f"*************chunk {i}*************\n")
                                 for qa in qa_data:
                                     fout.write(f"Q: {qa['question']}\nA: {qa['answer']}\n\n")  # 问答对格式化                          
 
@@ -262,10 +259,13 @@ async def main():
             response = await sllm.retrieve.get_output_path(encoder=encoder)  # 先 await 获取返回值
             path = [candidate_content.get('path') for candidate_content in response['metadatas'][0]][0]
             sllm.graph.triplesProcess(args, path)
-            
+            #import pdb;pdb.set_trace()
             args.qa_output_path = os.path.join(path, 'qa_history.txt')
             print(args.qa_output_path)
-            qa_bot = sllm.user_qa.user_qa(args)
+       
+            #读取数据库内容
+            corpus = sllm.graph.grpah(args,path)
+            qa_bot = sllm.user_qa.user_qa(args,corpus)
             qa_bot.start()  
         
         else: continue

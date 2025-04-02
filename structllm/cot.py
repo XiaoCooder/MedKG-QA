@@ -1,9 +1,13 @@
 import structllm as sllm
 import openai
 
-def cot(args, question, rerank):
+def cot(args, question, corpus):
     llm = sllm.llm.gpt(args)
     chunk_id = rerank[0]
+    
+    #获取三元组列表
+    #把三元组的内容和question输入模型进行问答
+    #输出答案和三元组列表
 
     results = sllm.retrieve.get_summary_collection_and_query_chunk(args.encoder_model, chunk_id)
     #import pdb; pdb.set_trace()
@@ -38,4 +42,5 @@ def cot(args, question, rerank):
                     total_num += 1 # 防止卡死
                     continue
                 flag = False
+                
     return result
