@@ -1,0 +1,127 @@
+<!-- templates/index.html 修改版 -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>URL 和 API 设置</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+        h1 {
+            color: #333;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .message {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 4px;
+            display: none;
+        }
+        .success {
+            background-color: #dff0d8;
+            color: #3c763d;
+            border: 1px solid #d6e9c6;
+        }
+        .error {
+            background-color: #f2dede;
+            color: #a94442;
+            border: 1px solid #ebccd1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>URL 和 API 设置</h1>
+        
+        <form id="settingsForm">
+            <div class="form-group">
+                <label for="urlInput">URL:</label>
+                <input type="text" id="urlInput" name="url" placeholder="请输入 URL">
+            </div>
+            
+            <div class="form-group">
+                <label for="apiInput">API:</label>
+                <input type="text" id="apiInput" name="api" placeholder="请输入 API">
+            </div>
+            
+            <button type="submit">保存设置</button>
+        </form>
+        
+        <div id="message" class="message"></div>
+    </div>
+
+    <script>
+        // 显示消息
+        function showMessage(text, type) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.textContent = text;
+            messageDiv.className = 'message ' + type;
+            messageDiv.style.display = 'block';
+        }
+        
+        // 设置表单提交处理
+        document.getElementById('settingsForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            
+            fetch('/save_settings', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // 显示成功消息
+                    showMessage("设置已保存，正在跳转到问答页面...", 'success');
+                    
+                    // 2秒后跳转到问答页面
+                    setTimeout(() => {
+                        window.location.href = '/qa';
+                    }, 2000);
+                } else {
+                    showMessage(data.message, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('保存设置失败:', error);
+                showMessage('保存设置失败，请稍后再试', 'error');
+            });
+        });
+    </script>
+</body>
+</html>

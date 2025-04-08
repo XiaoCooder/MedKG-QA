@@ -1,4 +1,4 @@
-
+# main.py
 import json 
 from tqdm import tqdm
 import argparse
@@ -11,8 +11,54 @@ from sentence_transformers import SentenceTransformer
 import torch
 from chromadb.utils import embedding_functions
 from chromadb.api.types import Documents, EmbeddingFunction, Embeddings, Images
+import settings  # 导入共享设置模块
+import threading  # 导入线程模块
+import app  # 导入 Flask 应用
+import time  # 导入时间模块
 
 os.environ["TOKENIZERS_PARALLELISM"] = "true"
+
+# 全局变量，用于线程间通信
+flask_ready = False
+settings_ready = threading.Event()
+
+# 启动 Flask 服务的线程函数
+def run_flask_app(port=5000):
+    global flask_ready
+    print(f"启动 Flask 服务，请访问 http://localhost:{port} 设置 URL 和 API")
+    flask_ready = True  # 在启动 Flask 之前设置为 True
+    app.start_flask(port=port)
+
+# 应用用户设置到 args
+def apply_user_settings(args):
+    """应用用户在 Flask 中设置的 URL 和 API"""
+    url = settings.get_url()
+    api = settings.get_api()
+    
+    if url:
+        args.openai_url = url
+        print(f"使用设置的 URL: {url}")
+    
+    if api:
+        args.key = api
+        print(f"使用设置的 API: {api}")
+    
+    return args
+
+# 监视设置变化
+def wait_for_settings():
+    print("等待通过前端设置 URL 和 API...")
+    
+    while True:
+        url = settings.get_url()
+        api = settings.get_api()
+        
+        if url and api:
+            print("检测到设置已完成！")
+            settings_ready.set()  # 设置事件，通知主线程
+            break
+        
+        time.sleep(1)  # 每秒检查一次
 
 # 检查路径是否存在，如果不存在则创建目录
 def check_path(path):
@@ -146,6 +192,7 @@ def parse_args():
 
     #others
     parser.add_argument('--debug', default=0, type=int)
+    parser.add_argument('--flask_port', default=5000, type=int, help='Flask 服务端口')
     
     args = parser.parse_args()
     return args
@@ -190,19 +237,53 @@ def merge_chunks(args, split_sizes):
         output_file="merged_output.txt",
         split_sizes=split_sizes
     )
-  
-      
+
 # 应用程序的主入口
 async def main():
     args = parse_args()
-    #load api-key
-    if not args.key.startswith("sk-"):
-        with open(args.key, "r",encoding='utf-8') as f:
+    
+    # 在单独的线程中启动 Flask 应用
+    flask_thread = threading.Thread(target=run_flask_app, args=(args.flask_port,))
+    flask_thread.daemon = True  # 设置为守护线程
+    flask_thread.start()
+    
+    # 等待 Flask 服务启动准备就绪
+    time.sleep(1)  # 给 Flask 线程一点时间来设置 flask_ready
+    
+    print(f"\n======================================================")
+    print(f"Flask 服务已启动，请访问 http://localhost:{args.flask_port} 设置 URL 和 API")
+    print(f"======================================================\n")
+    
+    # 在另一个线程中监视设置变化
+    settings_thread = threading.Thread(target=wait_for_settings)
+    settings_thread.daemon = True
+    settings_thread.start()
+    
+    # 等待设置完成
+    if not settings.get_url() or not settings.get_api():
+        print("程序将在设置完成后继续...")
+        settings_ready.wait()  # 等待设置完成
+    
+    # 应用用户设置
+    args = apply_user_settings(args)
+    
+    print(args.openai_url)
+    print(args.key)
+    print("\n设置已应用，继续执行主程序...\n")
+    
+
+    
+    # 原有的主程序代码从这里开始
+    if args.key and not args.key.startswith("sk-"):
+        with open(args.key, "r", encoding='utf-8') as f:
             all_keys = f.readlines()
             all_keys = [line.strip('\n') for line in all_keys]
             assert len(all_keys) >= args.num_process, (len(all_keys), args.num_process)
+    
+    print(1)
     encoder = sllm.retrieve.Encoder(args.encoder_model)
-    flag =True
+    flag = True
+    print(1)
     while (True):
         if (flag):
             user_input = input("I noticed that there is already data in your database. \nDo you need to open the Q&A directly? \nIf not, I will process the new input data\n").strip().lower()
@@ -211,9 +292,6 @@ async def main():
             user_input = input("Invalid input. Please enter 'yes' or 'no'.\n")
         if user_input == "no":
             #create DB （如果第一次安装可能没有数据）
-            #await sllm.retrieve.get_collection(name="qas" ,chroma_dir= args.chroma_dir,model=emb_model,ef=ef)
-            #await sllm.retrieve.get_collection(name="context" ,chroma_dir= args.chroma_dir,model=emb_model,ef=ef)
-            #await sllm.retrieve.get_collection(name="summary" ,chroma_dir= args.chroma_dir,model=emb_model,ef=ef)
             await sllm.retrieve.get_collection(name="path" , encoder = encoder)
             await sllm.retrieve.get_collection(name="triples" , encoder = encoder)
             await sllm.retrieve.get_collection(name="triple_head" , encoder = encoder)
@@ -221,9 +299,6 @@ async def main():
             await sllm.retrieve.get_collection(name="triple_tail" , encoder = encoder)
             await sllm.retrieve.get_collection(name="qa_pairs" , encoder = encoder)
             #reset DB （避免遗留数据）
-            #await sllm.retrieve.rebuild_collection(args.encoder_model,name="qas" ,chroma_dir= args.chroma_dir,model=emb_model,ef=ef)
-            #await sllm.retrieve.rebuild_collection(args.encoder_model,name="context" ,chroma_dir= args.chroma_dir,model=emb_model,ef=ef)
-            #await sllm.retrieve.rebuild_collection(args.encoder_model,name="summary" ,chroma_dir= args.chroma_dir,model=emb_model,ef=ef)
             await sllm.retrieve.rebuild_collection(name="path" ,encoder = encoder)
             await sllm.retrieve.rebuild_collection(name="triples" ,encoder = encoder)
             await sllm.retrieve.rebuild_collection(name="triple_head" ,encoder = encoder)
@@ -236,7 +311,7 @@ async def main():
             
             #process
             if args.num_process == 1:
-                await KGProcess(args, data, -1, all_keys[0], encoder)
+                await KGProcess(args, data, -1, all_keys[0] if 'all_keys' in locals() else args.key, encoder)
             else:
                 num_each_split = int(len(data) / args.num_process)
                 split_data = []
@@ -254,21 +329,25 @@ async def main():
                 async with Pool() as pool:
                         tasks = [pool.apply(KGProcess, args=(args, split_data[idx], idx, all_keys[idx], encoder)) for idx in range(args.num_process)]
                         await asyncio.gather(*tasks)
-                #merge txt
-                #merge_chunks(args, split_size)
             
             #Q&A system
             await sllm.retrieve.get_path_collection_and_write(path = args.output_path ,encoder=encoder)
             args.qa_output_path = os.path.join(args.output_path, 'qa_history.txt')
             qa_bot = sllm.user_qa.user_qa(args)
+            settings.set_qa_bot(qa_bot)
+            print(f"\n问答系统已就绪，您也可以在网页界面中提问")
+            print(f"访问 http://localhost:{args.flask_port}/qa 开始问答\n")
             qa_bot.start()  
             
         elif user_input == "yes":
             #Q&A system
-            path = [candidate_content.get('path') for candidate_content in await sllm.retrieve.get_output_path(encoder=encoder)['metadatas'][0]][0]
+            path = [candidate_content.get('path') for candidate_content in (await sllm.retrieve.get_output_path(encoder=encoder))['metadatas'][0]][0]
             args.qa_output_path = os.path.join(path, 'qa_history.txt')
             print(args.qa_output_path)
             qa_bot = sllm.user_qa.user_qa(args)
+            settings.set_qa_bot(qa_bot)
+            print(f"\n问答系统已就绪，您也可以在网页界面中提问")
+            print(f"访问 http://localhost:{args.flask_port}/qa 开始问答\n")
             qa_bot.start()  
         
         else: continue
