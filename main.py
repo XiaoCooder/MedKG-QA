@@ -132,6 +132,7 @@ def parse_args():
     parser.add_argument('--extract_keywords', default="structllm/prompt_/extract_keywords.json", type=str, help='The prompt pth.')
     parser.add_argument('--get_answer', default="structllm/prompt_/get_answer_and_triple.json", type=str, help='The prompt pth.')
     parser.add_argument('--get_answer1', default="structllm/prompt_/get_answer.json", type=str, help='The prompt pth.')
+    parser.add_argument('--acc_prompt', default="structllm/prompt_/judge_acc.json", type=str, help='The prompt pth.')
 
     # setting model
     parser.add_argument('--model', default="gpt-3.5-turbo", type=str, help='The openai model. "gpt-3.5-turbo-0125" and "gpt-4-1106-preview" are supported')
@@ -146,6 +147,7 @@ def parse_args():
 
     #others
     parser.add_argument('--debug', default=0, type=int)
+    parser.add_argument('--test', default=True, type=bool)
 
     
     
@@ -196,13 +198,18 @@ def merge_chunks(args):
 # 应用程序的主入口
 async def main():
     args = parse_args()
+    if args.test:
+        sllm.acc.evaluate_answer_quality(args)
+        return
     #load api-key
     if not args.key.startswith("sk-"):
         with open(args.key, "r",encoding='utf-8') as f:
             all_keys = f.readlines()
             all_keys = [line.strip('\n') for line in all_keys]
             assert len(all_keys) >= args.num_process, (len(all_keys), args.num_process)
-    
+    else:
+        all_keys = []
+        all_keys.append(args.key)
     encoder = sllm.retrieve.Encoder(args.encoder_model)
     flag =True
 
@@ -271,11 +278,11 @@ async def main():
             #import pdb;pdb.set_trace()
             args.qa_output_path = os.path.join(path, 'qa_history.json')
             #print(args.qa_output_path)
-       
+            
             #读取数据库内容
             corpus = sllm.graph.graph(args,path)
             qa_bot = sllm.user_qa.user_qa(args,corpus,path)
-            qa_bot.start()  
+            qa_bot.start(True)  
         
         else: continue
 

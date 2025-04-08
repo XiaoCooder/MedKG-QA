@@ -185,6 +185,20 @@ class query_prompt():
                 )
          except json.JSONDecodeError as e:
              #print(f"JSON 解码错误: {e}")
+             pass
+        
+        elif task == "judge_acc":
+         try:
+           with open(args.acc_prompt,'r',encoding = 'utf-8') as json_file:
+                self.naive_prompt = json.load(json_file)
+                self.naive_prompt.append(
+                         {
+                             "role": "user",
+                             "content": self.add_ask_Prompt(self.data, question, task)
+                         }
+                )
+         except json.JSONDecodeError as e:
+             #print(f"JSON 解码错误: {e}")
              pass   
 
     def add_query_Prompt(self, data, character=None , names = None, question=None):
@@ -234,6 +248,14 @@ class query_prompt():
                 Prompt = data
             if(question):
                 Prompt = Prompt + "请使用给出的三元组来回答问题，只需要输出最终的答案:" + question
+        
+        if task == "judge_acc":
+            len1 = len(data)
+            data_prompt = ''
+            for i in range(len1):
+                task_prompt = f"评估下面的生成答案与标准答案是否相似:{data[i]}{question[i]}\n"
+                data_prompt = data_prompt + task_prompt
+            Prompt = data_prompt
 
         return Prompt
     
