@@ -90,7 +90,6 @@ async def KGProcess(args, Data, idx, api_key , encoder):
                           end_index = min(start_index + args.batch_size, len(Data))  # 确保不超过总长度
                           # 提取一个批次
                           subData = Data[start_index:end_index]
-                          print(f"*************chunk {i}*************\n")
                           triple_data, qa_data= await sllm.ExtractKG.ExtractKGQA(args,subData,encoder)
                     except Exception as e:    
                         if args.store_error:
@@ -112,11 +111,9 @@ async def KGProcess(args, Data, idx, api_key , encoder):
                         triple_data, qa_data = await sllm.ExtractKG.ExtractKGQA(args, subData, encoder)
                         #save chunk
                         with open(triple_data_path, 'a', encoding='utf-8') as fout:
-                                fout.write(f"*************chunk {i}*************\n")
                                 for triple in triple_data:
                                     fout.write(f"[{triple['head']}, {triple['relation']}, {triple['tail']}]\n") 
                         with open(qa_data_path, 'a', encoding='utf-8') as fout:
-                                fout.write(f"*************chunk {i}*************\n")
                                 for qa in qa_data:
                                     fout.write(f"Q: {qa['question']}\nA: {qa['answer']}\n\n")  # 问答对格式化                          
 
@@ -178,6 +175,8 @@ def parse_args():
     parser.add_argument('--qa_prompt', default="structllm/prompt_/qa_prompt.json", type=str, help='The prompt pth.')
     parser.add_argument('--extractKG_prompt', default="structllm/prompt_/extractKG.json", type=str, help='The prompt pth.')
     parser.add_argument('--extractQA', default="structllm/prompt_/extractKGQA.json", type=str, help='The prompt pth.')
+    parser.add_argument('--extract_keywords', default="structllm/prompt_/extract_keywords.json", type=str, help='The prompt pth.')
+    parser.add_argument('--get_answer', default="structllm/prompt_/get_answer_and_triple.json", type=str, help='The prompt pth.')
 
     # setting model
     parser.add_argument('--model', default="gpt-3.5-turbo", type=str, help='The openai model. "gpt-3.5-turbo-0125" and "gpt-4-1106-preview" are supported')
@@ -198,7 +197,7 @@ def parse_args():
     return args
 
 # 合并多线程产生的
-def merge_chunks(args, split_sizes):
+def merge_chunks(args):
     """
     合并分块文件并恢复原始顺序
     
@@ -207,8 +206,6 @@ def merge_chunks(args, split_sizes):
     :param split_sizes: 每个分块的行数列表
     """
     # 确保split_sizes是整数列表
-    split_sizes = [int(size) for size in split_sizes]
-    chunk_num = len(split_sizes)
     data = []
     # 读取所有分块文件内容
     for i in range(chunk_num):
@@ -290,6 +287,7 @@ async def main():
             flag = False
         else:
             user_input = input("Invalid input. Please enter 'yes' or 'no'.\n")
+             
         if user_input == "no":
             #create DB （如果第一次安装可能没有数据）
             await sllm.retrieve.get_collection(name="path" , encoder = encoder)
@@ -305,30 +303,33 @@ async def main():
             await sllm.retrieve.rebuild_collection(name="triple_relation" ,encoder = encoder)
             await sllm.retrieve.rebuild_collection(name="triple_tail" ,encoder = encoder)
             await sllm.retrieve.rebuild_collection(name="qa_pairs" ,encoder = encoder)
-
+            
             #loda interview data
             data = TxtRead(args)
-            
+            # data_path_ceshi = "/home/wcy/code/KG-MedQA-v1.0/data_ceshi"
+            # with open(data_path_ceshi, 'w', encoding='utf-8') as f:
+            #      for d in data:
+            #           f.write(f"{d}\n")
+            # import pdb;pdb.set_trace()
             #process
             if args.num_process == 1:
                 await KGProcess(args, data, -1, all_keys[0] if 'all_keys' in locals() else args.key, encoder)
             else:
                 num_each_split = int(len(data) / args.num_process)
                 split_data = []
-                split_size = []
                 for idx in range(args.num_process):
                         start = idx * num_each_split
                         if idx == args.num_process - 1:
                             end = max((idx + 1) * num_each_split, len(data))
                             split_data.append(data[start:end])
-                            split_size.append(end-start+1)
                         else:
                             end = (idx + 1) * num_each_split
                             split_data.append(data[start:end])
-                            split_size.append(end-start+1)
                 async with Pool() as pool:
                         tasks = [pool.apply(KGProcess, args=(args, split_data[idx], idx, all_keys[idx], encoder)) for idx in range(args.num_process)]
                         await asyncio.gather(*tasks)
+                #merge txt
+                #merge_chunks(args)
             
             #Q&A system
             await sllm.retrieve.get_path_collection_and_write(path = args.output_path ,encoder=encoder)
@@ -340,6 +341,7 @@ async def main():
             qa_bot.start()  
             
         elif user_input == "yes":
+
             #Q&A system
             path = [candidate_content.get('path') for candidate_content in (await sllm.retrieve.get_output_path(encoder=encoder))['metadatas'][0]][0]
             args.qa_output_path = os.path.join(path, 'qa_history.txt')

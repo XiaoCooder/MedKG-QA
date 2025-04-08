@@ -119,7 +119,7 @@ class query_prompt():
          
         elif task == "get_answer":
          try:
-           with open(args.qa_prompt,'r',encoding = 'utf-8') as json_file:
+           with open(args.get_answer,'r',encoding = 'utf-8') as json_file:
                 self.naive_prompt = json.load(json_file)
                 self.naive_prompt.append(
                          {
@@ -157,7 +157,21 @@ class query_prompt():
                 )
          except json.JSONDecodeError as e:
              #print(f"JSON 解码错误: {e}")
-             pass      
+             pass
+
+        elif task == "extract_keywords":
+         try:
+           with open(args.extract_keywords,'r',encoding = 'utf-8') as json_file:
+                self.naive_prompt = json.load(json_file)
+                self.naive_prompt.append(
+                         {
+                             "role": "user",
+                             "content": self.add_ask_Prompt(self.data, question, task)
+                         }
+                )
+         except json.JSONDecodeError as e:
+             #print(f"JSON 解码错误: {e}")
+             pass   
 
     def add_query_Prompt(self, data, character=None , names = None, question=None):
         if isinstance(data, list):
@@ -173,16 +187,32 @@ class query_prompt():
         if task == "extract_triple": 
             data_prompt = ''  
             for i in range(len(data)):
-               task_prompt = f"I need you to extract triples from the following:{data[i]}\n"
+               task_prompt = f"我需要你从下面的数据中提取出三元组:{data[i]}\n"
                data_prompt = data_prompt + task_prompt
             Prompt = data_prompt
         
         if task == "extract_qa": 
             data_prompt = ''  
             for i in range(len(data)):
-               task_prompt = f"I need you to extract Q&A pairs from the following:{data[i]}\n"
+               task_prompt = f"我需要你从下面的数据中提取出问答对:{data[i]}\n"
                data_prompt = data_prompt + task_prompt
             Prompt = data_prompt
+        
+        if task == "extract_keywords": 
+            data_prompt = ''  
+            for i in range(len(data)):
+               task_prompt = f"我需要你从下面的数据中提取出关键词:{data[i]}\n"
+               data_prompt = data_prompt + task_prompt
+            Prompt = data_prompt
+
+        if task == "get_answer":
+            if isinstance(data, list):
+                Prompt = "\n".join(data)
+            else:
+                Prompt = data
+            if(question):
+                Prompt = Prompt + "请使用给出的三元组列表中的三元组来回答问题，只需要输出最终的答案和所使用的三元组:" + question
+
         return Prompt
     
    

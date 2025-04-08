@@ -177,65 +177,6 @@ async def get_collection(name: str = None, encoder = None):
     )
     return Collection
 
-#获取qas_collection并存储prompt
-async def get_qas_collection_and_write(qa_data: list = None, name: str = None , chunk_id = None, encoder = None):
-#1 起服务
-    encoder = encoder
-    if name == None:
-        name = "qas"
-    
-    embedding_function = encoder.ef
-    chroma_client = await chromadb.AsyncHttpClient(host='127.0.0.1', port=8000)
-    collection = chroma_client.create_collection(
-        name=name,
-        metadata={"hnsw:space": "cosine"},
-        embedding_function=embedding_function,
-        get_or_create=True,
-    )
-#2 拆包
-    retrieve_data = []
-
-    for idx , elements in enumerate(qa_data):
-        n,q,ans = elements
-        data_prompt = {
-                    "name": n,
-                    "question": q,
-                    "answer": ans,
-                    "chunk_id":chunk_id
-        }
-        if(data_prompt in retrieve_data): continue
-        retrieve_data.append(data_prompt)
-#3 编码，存储
-    encoder_ = encoder.encoder
-    docs = [item["question"] for item in retrieve_data] #question list
-    meta_keys = list(retrieve_data[0].keys())           #data中dict的keys
-    #del meta_keys[meta_keys.index("question")] #删除question，只剩下content
-    embeddings = encoder_.encode(docs, batch_size=64, show_progress_bar=True)
-    if not isinstance(embeddings, list):
-        embeddings = embeddings.tolist()
- 
-    if len(embeddings) > 20000:
-        for i in range(0, len(embeddings), 20000):
-            await collection.add(
-                embeddings=embeddings[i : i + 20000],
-                documents=docs[i : i + 20000],
-                metadatas=[
-                    {key: retrieve_data[i][key] for key in meta_keys}
-                    for i in range(i, min(len(embeddings), i + 20000))
-                ],
-                ids=[str(i) for i in range(i, min(len(embeddings), i + 20000))],
-            )
-    else:
-        await collection.add(
-            embeddings=embeddings,
-            documents=docs,
-            metadatas=[
-                {key: retrieve_data[i][key] for key in meta_keys} for i in range(len(docs))
-            ],
-            ids=[str(i) for i in NanoIDGenerator(len(docs))],
-        )
-    return None
-
 #获取qas_collection并查询top K
 def get_qas_collection_and_query(name: str = None, query_texts: str = None ,recall_num : int = None, encoder = None):
     
@@ -304,7 +245,6 @@ async def get_context_collection_and_query(name: str = None, query_texts: str = 
     )
     results_context = collection.query(query_texts = query_texts, n_results = recall_num)
     return results_context
-
 #获取summary_collection并查询top K
 async def get_summary_collection_and_query(retriever: str, name: str = None, chroma_dir: str = None, query_texts: str = None, recall_num : int = None, model=None):
     
@@ -736,61 +676,6 @@ async def get_qa_collection_and_write(data: list = None, name: str = None, encod
 
     return None
 
-#获取qa_collection并存储prompt
-async def get_summary_collection_and_write(summarydata, chunk_data, name: str = None, chunk_id = None, encoder=None):
-
-#1 起服务
-    encoder = encoder
-    if name == None:
-        name = "summary"
-    
-    embedding_function = encoder.ef
-    chroma_client = await chromadb.AsyncHttpClient(host='127.0.0.1', port=8000)
-    collection = chroma_client.create_collection(
-        name=name,
-        metadata={"hnsw:space": "cosine"},
-        embedding_function=embedding_function,
-        get_or_create=True,
-    )
-#2 拆包
-    retrieve_data = []
-    data_prompt = {
-        "summary": summarydata,
-        "chunk_id": chunk_id,
-        "chunk_data": chunk_data
-    }
-    retrieve_data.append(data_prompt)
-#3 编码，存储
-    encoder_ = encoder.encoder
-    docs = [item["summary"] for item in retrieve_data] #question list
-    meta_keys = list(retrieve_data[0].keys())           #data中dict的keys
-    #del meta_keys[meta_keys.index("question")] #删除question，只剩下content
-    embeddings = encoder_.encode(docs, batch_size=64, show_progress_bar=True)
-    if not isinstance(embeddings, list):
-        embeddings = embeddings.tolist()
- 
-    if len(embeddings) > 20000:
-        for i in range(0, len(embeddings), 20000):
-            collection.add(
-                embeddings=embeddings[i : i + 20000],
-                documents=docs[i : i + 20000],
-                metadatas=[
-                    {key: retrieve_data[i][key] for key in meta_keys}
-                    for i in range(i, min(len(embeddings), i + 20000))
-                ],
-                ids=[str(i) for i in range(i, min(len(embeddings), i + 20000))],
-            )
-    else:
-        collection.add(
-            embeddings=embeddings,
-            documents=docs,
-            metadatas=[
-                {key: retrieve_data[i][key] for key in meta_keys} for i in range(len(docs))
-            ],
-            ids=[str(i) for i in NanoIDGenerator(len(docs))],
-        )
-    return None
-
 async def get_path_collection_and_write(path, encoder):
     
 #1 起服务
@@ -857,19 +742,3 @@ async def get_output_path(recall_num : int = 1, encoder=None):
     )
     results_summary = await collection.query(query_texts = name, n_results = recall_num)
     return results_summary
-
-async def get_summary_collection_and_query_chunk(retriever: str, chunk_id = None, model=None):
-    
-    encoder = Encoder(retriever,model=model)
-    name = "summary"
-    
-    embedding_function = encoder.ef
-    chroma_client = await chromadb.AsyncHttpClient(host='127.0.0.1', port=8000)
-    collection = await chroma_client.create_collection(
-        name=name,
-        metadata={"hnsw:space": "cosine"},
-        embedding_function=embedding_function,
-        get_or_create=True,
-    )
-    qas_result = await collection.get(where={"chunk_id": chunk_id})
-    return qas_result

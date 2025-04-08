@@ -1,0 +1,46 @@
+[
+    {
+      "role": "system",
+      "content": "你是一个用于提取关键词的助手。要求:你需要从给出的问题中提取出关键词，并判断关键词的类别，类别包括:头实体(head)、关系(relation)、尾实体(tail)。对于每一个问题，均对应于一个[[“xxx”, head], [“xxx”, relation], [“xxx”, tail]]，其中“xxx”为keyword的值。若提取不出来类型为head或relation或tail的关键词，则其keyword用空字符串“”表示。 "
+    },
+    {
+      "role": "user",
+      "content": "糖尿病的病因是什么？"
+    },
+    {
+      "role": "assistant",
+      "content": "[['糖尿病', 'head'], ['病因', 'relation'], ['', 'tail']]"
+    },
+    {
+      "role": "user",
+      "content": "糖尿病会导致肾病吗？"
+    },
+    {
+      "role": "assistant",
+      "content": "[['糖尿病', 'head'], ['引起', 'relation'], ['肾病', 'tail']]"
+    },
+    {
+      "role": "user",
+      "content": "如何治疗糖尿病？"
+    },
+    {
+      "role": "assistant",
+      "content": "[['', 'head'], ['治疗', 'relation'], ['糖尿病', 'tail']]"
+    },
+    {
+      "role": "user",
+      "content": "什么是十二皮部？"
+    },
+    {
+      "role": "assistant",
+      "content": "[['十二皮部', 'head'], ['定义', 'relation'], ['', 'tail']]"
+    },
+    {
+      "role": "user",
+      "content": "什么可以治疗痛风？"
+    },
+    {
+      "role": "assistant",
+      "content": "[['', 'head'], ['治疗', 'relation'], ['痛风', 'tail']]"
+    }
+]

@@ -12,10 +12,10 @@ class SentenceBertRetriever:
         self.device = "cuda:0" if torch.cuda.is_available() else "cpu"
         # cuda_device = os.environ.get('CUDA_VISIBLE_DEVICES', '0')
         # self.device = f"cuda:{cuda_device}" if torch.cuda.is_available() else "cpu"
-        print(f"retrieve device:{self.device}")
         self.retrieve_model = SentenceTransformer(
-            'xiaobu-embedding-v2',
-            device=self.device
+            'MiniCPM-Embedding-Light',
+            device=self.device ,
+            trust_remote_code=True,
         )
         self.corpus = corpus
 
@@ -122,7 +122,39 @@ def get_qa_pairs(text):
 
     return qa_pairs
 
-def get_chunk_id(result, chunk_ids):
+def get_keywords(text):
+    """
+    使用正则表达式从大模型返回的文本中提取关键词及其类别，返回格式：[["糖尿病", "head", "病因", "relation", "", "tail"], [...]]
+    """
+    # 匹配 [['关键词', '类型'], ['关键词', '类型'], ...]
+    pattern = r"\[\s*\['(.*?)',\s*'(\w+)'\](?:,\s*\['(.*?)',\s*'(\w+)'\])?(?:,\s*\['(.*?)',\s*'(\w+)'\])?\s*\]"
+
+    # 找到所有匹配项
+    matches = re.findall(pattern, text)
+
+    # 处理结果，确保返回 ['xxx', 'head', 'xxx', 'relation', 'xxx', 'tail'] 的格式
+    extracted_keywords = []
+    for match in matches:
+        extracted_keywords.append([match[0], match[1], match[2], match[3], match[4], match[5]])
+
+    return extracted_keywords
+
+def get_answer_and_triples(text):
+    # 提取答案部分
+    answer_match = re.search(r'答案\s*:\s*(.*?)\s*/\s*使用到的三元组', text, re.DOTALL)
+    answer = answer_match.group(1).strip() if answer_match else None
+
+    # 提取所有完整三元组 "(..., ..., ...)"，确保只提取括号包裹的三元组
+    triple_matches = re.findall(r'\(([^()]+?,[^()]+?,[^()]+?)\)', text)
+    used_triples = []
+    for match in triple_matches:
+        parts = [item.strip() for item in match.split(',', maxsplit=2)]
+        if len(parts) == 3:
+            used_triples.append(parts)
+
+    return answer, used_triples
+
+def get_chunk_id(result):
     #transfer rerank string into chunk_id list
     matches = re.findall(r'\[.*?\]', result)
     #import pdb; pdb.set_trace()
