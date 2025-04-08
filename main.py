@@ -277,10 +277,10 @@ async def main():
             all_keys = [line.strip('\n') for line in all_keys]
             assert len(all_keys) >= args.num_process, (len(all_keys), args.num_process)
     
-    print(1)
+
     encoder = sllm.retrieve.Encoder(args.encoder_model)
     flag = True
-    print(1)
+
     while (True):
         if (flag):
             user_input = input("I noticed that there is already data in your database. \nDo you need to open the Q&A directly? \nIf not, I will process the new input data\n").strip().lower()
@@ -343,14 +343,23 @@ async def main():
         elif user_input == "yes":
 
             #Q&A system
-            path = [candidate_content.get('path') for candidate_content in (await sllm.retrieve.get_output_path(encoder=encoder))['metadatas'][0]][0]
-            args.qa_output_path = os.path.join(path, 'qa_history.txt')
+            response = await sllm.retrieve.get_output_path(encoder=encoder)  # 先 await 获取返回值
+            path = [candidate_content.get('path') for candidate_content in response['metadatas'][0]][0]
+            sllm.graph.triplesProcess(args, path)
+            #import pdb;pdb.set_trace()
+            args.qa_output_path = os.path.join(path, 'qa_history.json')
             print(args.qa_output_path)
-            qa_bot = sllm.user_qa.user_qa(args)
+       
+            #读取数据库内容
+            corpus = sllm.graph.graph(args,path)
+
+            qa_bot = sllm.user_qa.user_qa(args,corpus,path)
             settings.set_qa_bot(qa_bot)
             print(f"\n问答系统已就绪，您也可以在网页界面中提问")
             print(f"访问 http://localhost:{args.flask_port}/qa 开始问答\n")
-            qa_bot.start()  
+            qa_bot.start() 
+
+
         
         else: continue
 

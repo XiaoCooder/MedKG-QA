@@ -73,6 +73,7 @@ def ask_question():
         if not question:
             return jsonify({'success': False, 'message': '请输入问题'}), 400
         
+
         # 调用 qa_bot 处理问题
         answer = qa_bot.process_web_question(question)
         

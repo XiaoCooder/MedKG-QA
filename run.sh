@@ -2,7 +2,7 @@ OUTPUTPATH=output
 mkdir -p $OUTPUTPATH
 dt=`date '+%Y%m%d_%H%M%S'`
 task_name=processed_Interview
-GPU=1
+GPU=0
 
 model=deepseek-chat
 input=zhongyituina
@@ -12,9 +12,9 @@ p=1
 args=$@
 
 CUDA_VISIBLE_DEVICES=$GPU python main.py \
---key sk-e5c6b53b47694c6fbf94098c9678daeb \
+--key api_key.txt \
 --openai_url https://api.deepseek.com/v1 \
---data_path input/zhongyituina.txt \
+--data_path input/test.txt \
 --model ${model} \
 --clean_prompt_path structllm/prompt_/clean_prompt.json \
 --extract_q_prompt_path structllm/prompt_/extract_q_prompt.json \
