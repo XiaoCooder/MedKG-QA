@@ -154,6 +154,13 @@ def get_answer_and_triples(text):
 
     return answer, used_triples
 
+def get_answer(text):
+    # 提取答案部分
+    answer_match = re.search(r'答案\s*:\s*(.*?)\s*', text, re.DOTALL)
+    answer = answer_match.group(1).strip() if answer_match else None
+
+    return answer
+
 def get_chunk_id(result):
     #transfer rerank string into chunk_id list
     matches = re.findall(r'\[.*?\]', result)

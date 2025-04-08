@@ -131,6 +131,20 @@ class query_prompt():
              #print(f"JSON 解码错误: {e}")
              pass
         
+        elif task == "get_answer1":
+         try:
+           with open(args.get_answer1,'r',encoding = 'utf-8') as json_file:
+                self.naive_prompt = json.load(json_file)
+                self.naive_prompt.append(
+                         {
+                             "role": "user",
+                             "content": self.add_ask_Prompt(self.data, question, task)
+                         }
+                )
+         except json.JSONDecodeError as e:
+             #print(f"JSON 解码错误: {e}")
+             pass
+        
         elif task == "extract_triple":
          try:
            with open(args.extractKG_prompt,'r',encoding = 'utf-8') as json_file:
@@ -212,6 +226,14 @@ class query_prompt():
                 Prompt = data
             if(question):
                 Prompt = Prompt + "请使用给出的三元组列表中的三元组来回答问题，只需要输出最终的答案和所使用的三元组:" + question
+        
+        if task == "get_answer1":
+            if isinstance(data, list):
+                Prompt = "\n".join(data)
+            else:
+                Prompt = data
+            if(question):
+                Prompt = Prompt + "请使用给出的三元组来回答问题，只需要输出最终的答案:" + question
 
         return Prompt
     
