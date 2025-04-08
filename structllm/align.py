@@ -125,12 +125,6 @@ def get_qa_pairs(text):
 def get_keywords(text):
     """
     使用正则表达式从大模型返回的文本中提取关键词及其类别，返回格式：[["糖尿病", "head", "病因", "relation", "", "tail"], [...]]
-    
-    :param text: 原始文本，例如：
-        "[['糖尿病', 'head'], ['病因', 'relation'], ['', 'tail']], [['糖尿病', 'head'], ['引起', 'relation'], ['肾病', 'tail']]"
-    
-    :return: 提取的关键词列表，例如：
-        [['糖尿病', 'head', '病因', 'relation', '', 'tail'], ['糖尿病', 'head', '引起', 'relation', '肾病', 'tail']]
     """
     # 匹配 [['关键词', '类型'], ['关键词', '类型'], ...]
     pattern = r"\[\s*\['(.*?)',\s*'(\w+)'\](?:,\s*\['(.*?)',\s*'(\w+)'\])?(?:,\s*\['(.*?)',\s*'(\w+)'\])?\s*\]"
@@ -144,6 +138,21 @@ def get_keywords(text):
         extracted_keywords.append([match[0], match[1], match[2], match[3], match[4], match[5]])
 
     return extracted_keywords
+
+def get_answer_and_triples(text):
+    # 提取答案部分
+    answer_match = re.search(r'答案\s*:\s*(.*?)\s*/\s*使用到的三元组', text, re.DOTALL)
+    answer = answer_match.group(1).strip() if answer_match else None
+
+    # 提取所有完整三元组 "(..., ..., ...)"，确保只提取括号包裹的三元组
+    triple_matches = re.findall(r'\(([^()]+?,[^()]+?,[^()]+?)\)', text)
+    used_triples = []
+    for match in triple_matches:
+        parts = [item.strip() for item in match.split(',', maxsplit=2)]
+        if len(parts) == 3:
+            used_triples.append(parts)
+
+    return answer, used_triples
 
 def get_chunk_id(result):
     #transfer rerank string into chunk_id list

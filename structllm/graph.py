@@ -17,60 +17,63 @@ def extract_keywords(args,questions_path):
     flag = True
     max_retries = 3
     retry_count = 0
+    batch_size = 10
     while flag and retry_count < max_retries:
         retry_count += 1
         # 构造关键词提取的提示，task 设置为 "extract_keywords"
-        query_prompt = sllm.query_prompt.query_prompt(args, questions)
-        query_prompt.create_prompt(task="extract_keywords")
+        for i in range(len(questions)// batch_size + (1 if len(questions) % batch_size != 0 else 0)):
+            start_idx = i*batch_size
+            end_idx = min(start_idx + batch_size, len(questions))
+            subquestions = questions[start_idx:end_idx]
+            query_prompt = sllm.query_prompt.query_prompt(args, subquestions)
+            query_prompt.create_prompt(task="extract_keywords")
 
-        # 调用大模型获取关键词及其类别
-        responses_keywords = llm.get_response(query_prompt.naive_prompt)
+            # 调用大模型获取关键词及其类别
+            responses_keywords = llm.get_response(query_prompt.naive_prompt)
+            for response in responses_keywords:
+                try:
+                    result = response.choices[0].message.content       # 关键词列表（格式：[['xxx', 'head', 'xxx', 'relation', 'xxx', 'tail'], [...], [...] ]）
+                    extracted_keywords = sllm.align.get_keywords(result)  
+                    for keyword_group in extracted_keywords:  # 遍历每个关键词组
+                        keyword_dict = {"keyword_head": "", "keyword_relation": "", "keyword_tail": ""}  # 初始化为空字符串
 
-        for response in responses_keywords:
-            try:
-                result = response.choices[0].message.content       # 关键词列表（格式：[['xxx', 'head', 'xxx', 'relation', 'xxx', 'tail'], [...], [...] ]）
-                extracted_keywords = sllm.align.get_keywords(result)  
+                        for i in range(0, len(keyword_group), 2):  # 每两个元素一组
+                            keyword, keyword_type = keyword_group[i], keyword_group[i + 1]
 
-                for keyword_group in extracted_keywords:  # 遍历每个关键词组
-                    keyword_dict = {"keyword_head": "", "keyword_relation": "", "keyword_tail": ""}  # 初始化为空字符串
+                            if keyword_type == "head":  
+                                keyword_dict[f"keyword_{keyword_type}"] = keyword  # 存入关键词（即使是 ""）
+                            if keyword_type == "relation":  
+                                keyword_dict[f"keyword_{keyword_type}"] = keyword  # 存入关键词（即使是 ""）
+                            if keyword_type == "tail":  
+                                keyword_dict[f"keyword_{keyword_type}"] = keyword  # 存入关键词（即使是 ""）
 
-                    for i in range(0, len(keyword_group), 2):  # 每两个元素一组
-                        keyword, keyword_type = keyword_group[i], keyword_group[i + 1]
+                        keywords_data.append(keyword_dict)  # 存入最终的关键词字典
 
-                        if keyword_type == "head":  
-                            keyword_dict[f"keyword_{keyword_type}"] = keyword  # 存入关键词（即使是 ""）
-                        if keyword_type == "relation":  
-                            keyword_dict[f"keyword_{keyword_type}"] = keyword  # 存入关键词（即使是 ""）
-                        if keyword_type == "tail":  
-                            keyword_dict[f"keyword_{keyword_type}"] = keyword  # 存入关键词（即使是 ""）
-
-                    keywords_data.append(keyword_dict)  # 存入最终的关键词字典
-
-            except openai.BadRequestError as e:  # 处理无效输入
-                print(e)
-                total_num += 1
-                continue
+                except openai.BadRequestError as e:  # 处理无效输入
+                    print(e)
+                    total_num += 1
+                    continue
 
 
-            except IndexError as e: 
-                print(e)
-                total_num += 1 # 防止卡死
-                continue
+                except IndexError as e: 
+                    print(e)
+                    total_num += 1 # 防止卡死
+                    continue
 
-            except openai.APITimeoutError as e: # 超时
-                print(e)
-                total_num += 1 # 防止卡死
-                continue
+                except openai.APITimeoutError as e: # 超时
+                    print(e)
+                    total_num += 1 # 防止卡死
+                    continue
 
-            except ValueError as e: # maximum context length
-                print(e)
-                continue
+                except ValueError as e: # maximum context length
+                    print(e)
+                    continue
 
-            except Exception as e:
-                print(f"提取关键词时出错: {e}")
-                total_num += 1
-                continue
-            flag = False
+                except Exception as e:
+                    print(f"提取关键词时出错: {e}")
+                    total_num += 1
+                    continue
+                flag = False     
     return keywords_data
 
 
@@ -309,6 +312,7 @@ def match_and_find_triples(args, path, keywords_data):
             "keywords": keywords,
             "matched_triples": current_matches
         })
+        
     return matched_results # 返回所有匹配到的三元组
 
 
@@ -331,7 +335,7 @@ def write_qa_and_matched_results_to_new_file(path, matched_results):
             # 对每一对 QA 进行处理，确保去掉每一行的 "Q: " 和 "A: "
             qa_pairs = [pair.replace("Q: ", "").replace("A: ", "") for pair in qa_pairs]
     except Exception as e:
-        print(f"读取文件 {qa_pairs_file} 时出错: {e}")
+        print(f"读取文件时出错: {e}")
         return
     
     # 创建并写入新文件
@@ -373,7 +377,7 @@ def triplesProcess(args, path):
     keywords_data = extract_keywords(args,questions_path)
     matched_results = match_and_find_triples(args, path, keywords_data)
     write_qa_and_matched_results_to_new_file(path, matched_results)
-    import pdb;pdb.set_trace()
+    #import pdb;pdb.set_trace()
     
 
 

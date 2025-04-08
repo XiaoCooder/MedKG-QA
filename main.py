@@ -130,6 +130,7 @@ def parse_args():
     parser.add_argument('--extractKG_prompt', default="structllm/prompt_/extractKG.json", type=str, help='The prompt pth.')
     parser.add_argument('--extractQA', default="structllm/prompt_/extractKGQA.json", type=str, help='The prompt pth.')
     parser.add_argument('--extract_keywords', default="structllm/prompt_/extract_keywords.json", type=str, help='The prompt pth.')
+    parser.add_argument('--get_answer', default="structllm/prompt_/get_answer_and_triple.json", type=str, help='The prompt pth.')
 
     # setting model
     parser.add_argument('--model', default="gpt-3.5-turbo", type=str, help='The openai model. "gpt-3.5-turbo-0125" and "gpt-4-1106-preview" are supported')
@@ -144,6 +145,8 @@ def parse_args():
 
     #others
     parser.add_argument('--debug', default=0, type=int)
+
+    
     
     args = parser.parse_args()
     return args
@@ -208,6 +211,7 @@ async def main():
             flag = False
         else:
             user_input = input("Invalid input. Please enter 'yes' or 'no'.\n")
+             
         if user_input == "no":
             #create DB （如果第一次安装可能没有数据）
             await sllm.retrieve.get_collection(name="path" , encoder = encoder)
@@ -226,7 +230,11 @@ async def main():
             
             #loda interview data
             data = TxtRead(args)
-            
+            # data_path_ceshi = "/home/wcy/code/KG-MedQA-v1.0/data_ceshi"
+            # with open(data_path_ceshi, 'w', encoding='utf-8') as f:
+            #      for d in data:
+            #           f.write(f"{d}\n")
+            # import pdb;pdb.set_trace()
             #process
             if args.num_process == 1:
                 await KGProcess(args, data, -1, all_keys[0], encoder)
@@ -260,12 +268,12 @@ async def main():
             path = [candidate_content.get('path') for candidate_content in response['metadatas'][0]][0]
             sllm.graph.triplesProcess(args, path)
             #import pdb;pdb.set_trace()
-            args.qa_output_path = os.path.join(path, 'qa_history.txt')
-            print(args.qa_output_path)
+            args.qa_output_path = os.path.join(path, 'qa_history.json')
+            #print(args.qa_output_path)
        
             #读取数据库内容
-            corpus = sllm.graph.grpah(args,path)
-            qa_bot = sllm.user_qa.user_qa(args,corpus)
+            corpus = sllm.graph.graph(args,path)
+            qa_bot = sllm.user_qa.user_qa(args,corpus,path)
             qa_bot.start()  
         
         else: continue

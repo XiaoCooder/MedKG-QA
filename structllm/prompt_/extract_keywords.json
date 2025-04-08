@@ -18,5 +18,29 @@
     {
       "role": "assistant",
       "content": "[['糖尿病', 'head'], ['引起', 'relation'], ['肾病', 'tail']]"
+    },
+    {
+      "role": "user",
+      "content": "如何治疗糖尿病？"
+    },
+    {
+      "role": "assistant",
+      "content": "[['', 'head'], ['治疗', 'relation'], ['糖尿病', 'tail']]"
+    },
+    {
+      "role": "user",
+      "content": "什么是十二皮部？"
+    },
+    {
+      "role": "assistant",
+      "content": "[['十二皮部', 'head'], ['定义', 'relation'], ['', 'tail']]"
+    },
+    {
+      "role": "user",
+      "content": "什么可以治疗痛风？"
+    },
+    {
+      "role": "assistant",
+      "content": "[['', 'head'], ['治疗', 'relation'], ['痛风', 'tail']]"
     }
 ]
