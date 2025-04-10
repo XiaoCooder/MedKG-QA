@@ -11,6 +11,27 @@ def home():
     """渲染首页"""
     return render_template('index.html')
 
+@app.route('/loading')
+def loading_page():
+    """渲染加载页面"""
+    return render_template('loading.html')
+
+@app.route('/check_loading_status')
+def check_loading_status():
+    """检查模型加载状态"""
+    encoder_ready = settings.get_encoder_ready()
+    
+    if encoder_ready:
+        return jsonify({
+            'completed': True,
+            'message': '模型已加载完成，即将跳转...'
+        })
+    else:
+        return jsonify({
+            'completed': False,
+            'message': '正在加载模型，请稍候...'
+        })
+
 @app.route('/qa')
 def qa_page():
     """渲染问答页面"""
@@ -19,6 +40,9 @@ def qa_page():
 @app.route('/data_choice')
 def data_choice_page():
     """渲染数据选择页面"""
+    # 确保编码器已经准备好
+    if not settings.get_encoder_ready():
+        return redirect(url_for('loading_page'))
     return render_template('data_choice.html')
 
 @app.route('/select_data_option', methods=['POST'])
@@ -66,13 +90,13 @@ def save_settings():
         print(f"已保存 URL: {url}")
         print(f"已保存 API: {api}")
         
-        # 返回成功，并指示前端重定向到数据选择页面
+        # 返回成功，并指示前端重定向到加载页面
         return jsonify({
             'success': True, 
             'message': '设置已保存',
             'url': url,
             'api': api,
-            'redirect': '/data_choice'  # 修改重定向到数据选择页面
+            'redirect': '/loading'  # 修改重定向到加载页面
         })
         
     except Exception as e:

@@ -7,7 +7,8 @@
 _url = ""
 _api = ""
 _qa_bot = None
-_data_choice = None  # 新增：存储用户对数据加载的选择
+_data_choice = None  # 存储用户对数据加载的选择
+_encoder_ready = False  # 新增：跟踪编码器是否已加载完成
 
 def has_existing_settings():
     """检查是否已有现有配置"""
@@ -63,7 +64,7 @@ def set_qa_bot(bot):
     global _qa_bot
     _qa_bot = bot
 
-# 新增函数：数据选择相关
+# 数据选择相关
 def set_data_choice(choice):
     """设置用户对数据加载的选择（'yes' 或 'no'）"""
     global _data_choice
@@ -83,3 +84,15 @@ def clear_data_choice():
     """清除用户的数据选择"""
     global _data_choice
     _data_choice = None
+
+# 编码器状态跟踪相关
+def set_encoder_ready(status):
+    """设置编码器准备状态"""
+    global _encoder_ready
+    _encoder_ready = status
+    print(f"编码器状态已更新：{'准备完成' if status else '未准备好'}")
+
+def get_encoder_ready():
+    """获取编码器是否准备好"""
+    global _encoder_ready
+    return _encoder_ready

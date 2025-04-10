@@ -268,19 +268,22 @@ async def main():
     print(args.key)
     print("\n设置已应用，继续执行主程序...\n")
     
-
+    # 初始化编码器的状态
+    settings.set_encoder_ready(False)
+    print("开始加载编码器模型，这可能需要一些时间...")
     
-    # 原有的主程序代码从这里开始
-    if args.key and not args.key.startswith("sk-"):
-        with open(args.key, "r", encoding='utf-8') as f:
-            all_keys = f.readlines()
-            all_keys = [line.strip('\n') for line in all_keys]
-            assert len(all_keys) >= args.num_process, (len(all_keys), args.num_process)
-    
-    print("1")
-    
-    encoder = sllm.retrieve.Encoder(args.encoder_model)
-    flag = True
+    # 耗时操作：加载编码器
+    # 耗时操作：加载编码器
+    try:
+        encoder = sllm.retrieve.Encoder(args.encoder_model)
+        # 加载完成后，仅设置状态为就绪
+        settings.set_encoder_ready(True)
+        print("编码器模型加载完成！")
+    except Exception as e:
+        print(f"加载编码器时出错: {str(e)}")
+        # 即使出错，也需要更新状态以避免前端一直等待
+        settings.set_encoder_ready(True)
+        raise e
 
     print("start data choice")
     # 清除可能存在的之前的选择
@@ -299,87 +302,75 @@ async def main():
     user_input = settings.get_data_choice()
     print(f"用户选择了: {user_input}")
 
-    while (True):
-        if (flag):
-            user_input = input("I noticed that there is already data in your database. \nDo you need to open the Q&A directly? \nIf not, I will process the new input data\n").strip().lower()
-            flag = False
-        else:
-            user_input = input("Invalid input. Please enter 'yes' or 'no'.\n")
-             
-        if user_input == "no":
-            #create DB （如果第一次安装可能没有数据）
-            await sllm.retrieve.get_collection(name="path" , encoder = encoder)
-            await sllm.retrieve.get_collection(name="triples" , encoder = encoder)
-            await sllm.retrieve.get_collection(name="triple_head" , encoder = encoder)
-            await sllm.retrieve.get_collection(name="triple_relation" , encoder = encoder)
-            await sllm.retrieve.get_collection(name="triple_tail" , encoder = encoder)
-            await sllm.retrieve.get_collection(name="qa_pairs" , encoder = encoder)
-            #reset DB （避免遗留数据）
-            await sllm.retrieve.rebuild_collection(name="path" ,encoder = encoder)
-            await sllm.retrieve.rebuild_collection(name="triples" ,encoder = encoder)
-            await sllm.retrieve.rebuild_collection(name="triple_head" ,encoder = encoder)
-            await sllm.retrieve.rebuild_collection(name="triple_relation" ,encoder = encoder)
-            await sllm.retrieve.rebuild_collection(name="triple_tail" ,encoder = encoder)
-            await sllm.retrieve.rebuild_collection(name="qa_pairs" ,encoder = encoder)
-            
-            #loda interview data
-            data = TxtRead(args)
-            # data_path_ceshi = "/home/wcy/code/KG-MedQA-v1.0/data_ceshi"
-            # with open(data_path_ceshi, 'w', encoding='utf-8') as f:
-            #      for d in data:
-            #           f.write(f"{d}\n")
-            # import pdb;pdb.set_trace()
-            #process
-            if args.num_process == 1:
-                await KGProcess(args, data, -1, all_keys[0] if 'all_keys' in locals() else args.key, encoder)
-            else:
-                num_each_split = int(len(data) / args.num_process)
-                split_data = []
-                for idx in range(args.num_process):
-                        start = idx * num_each_split
-                        if idx == args.num_process - 1:
-                            end = max((idx + 1) * num_each_split, len(data))
-                            split_data.append(data[start:end])
-                        else:
-                            end = (idx + 1) * num_each_split
-                            split_data.append(data[start:end])
-                async with Pool() as pool:
-                        tasks = [pool.apply(KGProcess, args=(args, split_data[idx], idx, all_keys[idx], encoder)) for idx in range(args.num_process)]
-                        await asyncio.gather(*tasks)
-                #merge txt
-                #merge_chunks(args)
-            
-            #Q&A system
-            await sllm.retrieve.get_path_collection_and_write(path = args.output_path ,encoder=encoder)
-            args.qa_output_path = os.path.join(args.output_path, 'qa_history.txt')
-            qa_bot = sllm.user_qa.user_qa(args)
-            settings.set_qa_bot(qa_bot)
-            print(f"\n问答系统已就绪，您也可以在网页界面中提问")
-            print(f"访问 http://localhost:{args.flask_port}/qa 开始问答\n")
-            qa_bot.start()  
-            
-        elif user_input == "yes":
-
-            #Q&A system
-            response = await sllm.retrieve.get_output_path(encoder=encoder)  # 先 await 获取返回值
-            path = [candidate_content.get('path') for candidate_content in response['metadatas'][0]][0]
-            sllm.graph.triplesProcess(args, path)
-            #import pdb;pdb.set_trace()
-            args.qa_output_path = os.path.join(path, 'qa_history.json')
-            print(args.qa_output_path)
-       
-            #读取数据库内容
-            corpus = sllm.graph.graph(args,path)
-
-            qa_bot = sllm.user_qa.user_qa(args,corpus,path)
-            settings.set_qa_bot(qa_bot)
-            print(f"\n问答系统已就绪，您也可以在网页界面中提问")
-            print(f"访问 http://localhost:{args.flask_port}/qa 开始问答\n")
-            qa_bot.start() 
-
-
+    if user_input == "no":
+        #create DB （如果第一次安装可能没有数据）
+        await sllm.retrieve.get_collection(name="path", encoder=encoder)
+        await sllm.retrieve.get_collection(name="triples", encoder=encoder)
+        await sllm.retrieve.get_collection(name="triple_head", encoder=encoder)
+        await sllm.retrieve.get_collection(name="triple_relation", encoder=encoder)
+        await sllm.retrieve.get_collection(name="triple_tail", encoder=encoder)
+        await sllm.retrieve.get_collection(name="qa_pairs", encoder=encoder)
+        #reset DB （避免遗留数据）
+        await sllm.retrieve.rebuild_collection(name="path", encoder=encoder)
+        await sllm.retrieve.rebuild_collection(name="triples", encoder=encoder)
+        await sllm.retrieve.rebuild_collection(name="triple_head", encoder=encoder)
+        await sllm.retrieve.rebuild_collection(name="triple_relation", encoder=encoder)
+        await sllm.retrieve.rebuild_collection(name="triple_tail", encoder=encoder)
+        await sllm.retrieve.rebuild_collection(name="qa_pairs", encoder=encoder)
         
-        else: continue
+        #load interview data
+        data = TxtRead(args)
+        # data_path_ceshi = "/home/wcy/code/KG-MedQA-v1.0/data_ceshi"
+        # with open(data_path_ceshi, 'w', encoding='utf-8') as f:
+        #      for d in data:
+        #           f.write(f"{d}\n")
+        # import pdb;pdb.set_trace()
+        #process
+        if args.num_process == 1:
+            await KGProcess(args, data, -1, all_keys[0] if 'all_keys' in locals() else args.key, encoder)
+        else:
+            num_each_split = int(len(data) / args.num_process)
+            split_data = []
+            for idx in range(args.num_process):
+                    start = idx * num_each_split
+                    if idx == args.num_process - 1:
+                        end = max((idx + 1) * num_each_split, len(data))
+                        split_data.append(data[start:end])
+                    else:
+                        end = (idx + 1) * num_each_split
+                        split_data.append(data[start:end])
+            async with Pool() as pool:
+                    tasks = [pool.apply(KGProcess, args=(args, split_data[idx], idx, all_keys[idx], encoder)) for idx in range(args.num_process)]
+                    await asyncio.gather(*tasks)
+            #merge txt
+            #merge_chunks(args)
+        
+        #Q&A system
+        await sllm.retrieve.get_path_collection_and_write(path=args.output_path, encoder=encoder)
+        args.qa_output_path = os.path.join(args.output_path, 'qa_history.txt')
+        qa_bot = sllm.user_qa.user_qa(args)
+        settings.set_qa_bot(qa_bot)
+        print(f"\n问答系统已就绪，您也可以在网页界面中提问")
+        print(f"访问 http://localhost:{args.flask_port}/qa 开始问答\n")
+        qa_bot.start()  
+        
+    elif user_input == "yes":
+        #Q&A system
+        response = await sllm.retrieve.get_output_path(encoder=encoder)  # 先 await 获取返回值
+        path = [candidate_content.get('path') for candidate_content in response['metadatas'][0]][0]
+        sllm.graph.triplesProcess(args, path)
+        #import pdb;pdb.set_trace()
+        args.qa_output_path = os.path.join(path, 'qa_history.json')
+        print(args.qa_output_path)
+   
+        #读取数据库内容
+        corpus = sllm.graph.graph(args,path)
+
+        qa_bot = sllm.user_qa.user_qa(args,corpus,path)
+        settings.set_qa_bot(qa_bot)
+        print(f"\n问答系统已就绪，您也可以在网页界面中提问")
+        print(f"访问 http://localhost:{args.flask_port}/qa 开始问答\n")
+        qa_bot.start() 
 
 if __name__=="__main__":
     asyncio.run(main())

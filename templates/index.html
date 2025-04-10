@@ -126,6 +126,12 @@
             transform: translateY(0);
         }
 
+        button:disabled {
+            background-color: #b0b0b0;
+            cursor: not-allowed;
+            transform: none;
+        }
+
         .button-icon {
             margin-right: 8px;
         }
@@ -186,7 +192,7 @@
                 <input type="text" id="apiInput" name="api" placeholder="请输入 API">
             </div>
             
-            <button type="submit">
+            <button type="submit" id="submitButton">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="button-icon">
                     <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
                     <polyline points="17 21 17 13 7 13 7 21"></polyline>
@@ -212,6 +218,17 @@
         document.getElementById('settingsForm').addEventListener('submit', function(e) {
             e.preventDefault();
             
+            // 禁用提交按钮
+            const submitButton = document.getElementById('submitButton');
+            submitButton.disabled = true;
+            submitButton.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="button-icon">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="12 6 12 12 16 14"></polyline>
+                </svg>
+                处理中...
+            `;
+            
             const formData = new FormData(this);
             
             fetch('/save_settings', {
@@ -222,19 +239,39 @@
             .then(data => {
                 if (data.success) {
                     // 显示成功消息
-                    showMessage("设置已保存，正在跳转到数据选择页面...", 'success');
+                    showMessage("设置已保存，正在加载模型...", 'success');
                     
-                    // 2秒后跳转到数据选择页面
+                    // 1.5秒后自动跳转到加载页面
                     setTimeout(() => {
-                        window.location.href = '/data_choice';
-                    }, 2000);
+                        window.location.href = '/loading';
+                    }, 1500);
                 } else {
                     showMessage(data.message, 'error');
+                    // 恢复提交按钮
+                    submitButton.disabled = false;
+                    submitButton.innerHTML = `
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="button-icon">
+                            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                            <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                            <polyline points="7 3 7 8 15 8"></polyline>
+                        </svg>
+                        保存设置
+                    `;
                 }
             })
             .catch(error => {
                 console.error('保存设置失败:', error);
                 showMessage('保存设置失败，请稍后再试', 'error');
+                // 恢复提交按钮
+                submitButton.disabled = false;
+                submitButton.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="button-icon">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                        <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                        <polyline points="7 3 7 8 15 8"></polyline>
+                    </svg>
+                    保存设置
+                `;
             });
         });
     </script>
