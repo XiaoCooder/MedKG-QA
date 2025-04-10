@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据选择 - 中医推拿推荐系统</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #4361ee;
+            --primary-hover: #3a56d4;
+            --secondary-color: #e63946;
+            --secondary-hover: #d62f3c;
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+            --text-color: #333333;
+            --border-color: #e0e0e0;
+            --message-bg: #e7f3ff;
+            --message-border: #c2e0ff;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --border-radius: 8px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            box-shadow: var(--shadow);
+            border-radius: var(--border-radius);
+            background-color: var(--card-bg);
+            padding: 30px;
+            margin: 20px auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            color: var(--primary-color);
+            font-size: 2.2rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .message {
+            margin-bottom: 25px;
+            padding: 15px;
+            border-radius: var(--border-radius);
+            background-color: var(--message-bg);
+            border: 1px solid var(--message-border);
+            font-size: 1rem;
+            line-height: 1.6;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 25px;
+        }
+
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            transition: background-color 0.3s, transform 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex: 1;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        button:hover {
+            background-color: var(--primary-hover);
+            transform: translateY(-2px);
+        }
+
+        button:disabled {
+            background-color: #b0b0b0;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-no {
+            background-color: var(--secondary-color);
+        }
+
+        .btn-no:hover {
+            background-color: var(--secondary-hover);
+        }
+
+        .button-icon {
+            margin-right: 8px;
+        }
+
+        #loading {
+            display: none;
+            text-align: center;
+            margin-top: 25px;
+            padding: 15px;
+            border-radius: var(--border-radius);
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            margin: 15px auto;
+            border: 4px solid rgba(67, 97, 238, 0.2);
+            border-top: 4px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* 响应式设计 */
+        @media screen and (max-width: 600px) {
+            .container {
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>数据选择</h1>
+        </header>
+        
+        <div class="message">
+            <p>检测到系统中已有数据。请选择您要执行的操作：</p>
+        </div>
+        
+        <div class="button-group">
+            <button id="btnYes">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="button-icon">
+                    <path d="M9 11l3 3L22 4"></path>
+                    <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"></path>
+                </svg>
+                是，直接打开问答系统
+            </button>
+            <button id="btnNo" class="btn-no">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="button-icon">
+                    <path d="M20 14.66V20a2 2 0 01-2 2H4a2 2 0 01-2-2V6a2 2 0 012-2h5.34"></path>
+                    <polygon points="18 2 22 6 12 16 8 16 8 12 18 2"></polygon>
+                </svg>
+                否，处理新输入数据
+            </button>
+        </div>
+        
+        <div id="loading">
+            <p>正在处理，请稍候...</p>
+            <div class="spinner"></div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('btnYes').addEventListener('click', function() {
+            document.getElementById('loading').style.display = 'block';
+            selectOption('yes');
+        });
+        
+        document.getElementById('btnNo').addEventListener('click', function() {
+            document.getElementById('loading').style.display = 'block';
+            selectOption('no');
+        });
+        
+        function selectOption(choice) {
+            // 禁用按钮，防止重复点击
+            document.getElementById('btnYes').disabled = true;
+            document.getElementById('btnNo').disabled = true;
+            
+            fetch('/select_data_option', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ choice: choice })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // 显示处理中消息
+                    document.getElementById('loading').innerHTML = `
+                        <p>选择已保存，正在处理数据，请稍候...</p>
+                        <div class="spinner"></div>
+                    `;
+                    
+                    // 等待后台处理一段时间后跳转到问答页面
+                    setTimeout(() => {
+                        window.location.href = '/qa';
+                    }, 3000); // 等待3秒，给后台处理一些时间
+                } else {
+                    alert('发生错误: ' + data.message);
+                    // 重新启用按钮
+                    document.getElementById('btnYes').disabled = false;
+                    document.getElementById('btnNo').disabled = false;
+                    document.getElementById('loading').style.display = 'none';
+                }
+            })
+            .catch(error => {
+                console.error('错误:', error);
+                alert('发生错误，请稍后再试');
+                // 重新启用按钮
+                document.getElementById('btnYes').disabled = false;
+                document.getElementById('btnNo').disabled = false;
+                document.getElementById('loading').style.display = 'none';
+            });
+        }
+    </script>
+</body>
+</html>

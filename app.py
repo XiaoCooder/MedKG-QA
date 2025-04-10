@@ -16,6 +16,36 @@ def qa_page():
     """渲染问答页面"""
     return render_template('qa.html')
 
+@app.route('/data_choice')
+def data_choice_page():
+    """渲染数据选择页面"""
+    return render_template('data_choice.html')
+
+@app.route('/select_data_option', methods=['POST'])
+def select_data_option():
+    """处理用户对数据加载的选择"""
+    try:
+        # 从 JSON 中获取选择
+        data = request.get_json()
+        choice = data.get('choice', '')
+        
+        # 验证输入
+        if choice not in ['yes', 'no']:
+            return jsonify({'success': False, 'message': '无效的选择'}), 400
+        
+        # 保存用户选择
+        settings.set_data_choice(choice)
+        
+        # 返回成功
+        return jsonify({
+            'success': True, 
+            'message': f'选择已保存: {choice}',
+            'choice': choice
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'发生错误: {str(e)}'}), 500
+
 @app.route('/save_settings', methods=['POST'])
 def save_settings():
     """保存用户设置"""
@@ -36,13 +66,13 @@ def save_settings():
         print(f"已保存 URL: {url}")
         print(f"已保存 API: {api}")
         
-        # 返回成功，并指示前端重定向到问答页面
+        # 返回成功，并指示前端重定向到数据选择页面
         return jsonify({
             'success': True, 
             'message': '设置已保存',
             'url': url,
             'api': api,
-            'redirect': '/qa'  # 添加重定向标志
+            'redirect': '/data_choice'  # 修改重定向到数据选择页面
         })
         
     except Exception as e:

@@ -277,9 +277,27 @@ async def main():
             all_keys = [line.strip('\n') for line in all_keys]
             assert len(all_keys) >= args.num_process, (len(all_keys), args.num_process)
     
-
+    print("1")
+    
     encoder = sllm.retrieve.Encoder(args.encoder_model)
     flag = True
+
+    print("start data choice")
+    # 清除可能存在的之前的选择
+    settings.clear_data_choice()
+
+    # 默认有数据，引导用户到选择页面
+    print(f"\n======================================================")
+    print(f"请访问 http://localhost:{args.flask_port}/data_choice 选择如何继续")
+    print(f"======================================================\n")
+
+    # 等待用户在网页上做出选择
+    while settings.get_data_choice() is None:
+        print("等待用户选择是否直接加载已有数据...")
+        time.sleep(2)  # 每2秒检查一次
+
+    user_input = settings.get_data_choice()
+    print(f"用户选择了: {user_input}")
 
     while (True):
         if (flag):
