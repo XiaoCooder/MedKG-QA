@@ -318,6 +318,10 @@ async def main():
         await sllm.retrieve.rebuild_collection(name="triple_tail", encoder=encoder)
         await sllm.retrieve.rebuild_collection(name="qa_pairs", encoder=encoder)
         
+
+        # 设置数据处理状态为处理中
+        settings.set_process_data_ready(False)
+
         #load interview data
         data = TxtRead(args)
         # data_path_ceshi = "/home/wcy/code/KG-MedQA-v1.0/data_ceshi"
@@ -345,6 +349,9 @@ async def main():
             #merge txt
             #merge_chunks(args)
         
+        # 处理完成后，更新状态
+        settings.set_process_data_ready(True)
+
         #Q&A system
         await sllm.retrieve.get_path_collection_and_write(path=args.output_path, encoder=encoder)
         args.qa_output_path = os.path.join(args.output_path, 'qa_history.txt')
@@ -355,10 +362,16 @@ async def main():
         qa_bot.start()  
         
     elif user_input == "yes":
+
+        settings.set_load_data_ready(False)
+
         #Q&A system
         response = await sllm.retrieve.get_output_path(encoder=encoder)  # 先 await 获取返回值
         path = [candidate_content.get('path') for candidate_content in response['metadatas'][0]][0]
         sllm.graph.triplesProcess(args, path)
+
+        
+    
         #import pdb;pdb.set_trace()
         args.qa_output_path = os.path.join(path, 'qa_history.json')
         print(args.qa_output_path)
@@ -368,6 +381,8 @@ async def main():
 
         qa_bot = sllm.user_qa.user_qa(args,corpus,path)
         settings.set_qa_bot(qa_bot)
+        # 加载完成后，更新状态
+        settings.set_load_data_ready(True)
         print(f"\n问答系统已就绪，您也可以在网页界面中提问")
         print(f"访问 http://localhost:{args.flask_port}/qa 开始问答\n")
         qa_bot.start() 

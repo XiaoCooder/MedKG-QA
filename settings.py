@@ -8,7 +8,9 @@ _url = ""
 _api = ""
 _qa_bot = None
 _data_choice = None  # 存储用户对数据加载的选择
-_encoder_ready = False  # 新增：跟踪编码器是否已加载完成
+_encoder_ready = False  # 跟踪编码器是否已加载完成
+_process_data_ready = False  # 跟踪数据处理是否完成
+_load_data_ready = False  # 跟踪数据加载是否完成
 
 def has_existing_settings():
     """检查是否已有现有配置"""
@@ -96,3 +98,27 @@ def get_encoder_ready():
     """获取编码器是否准备好"""
     global _encoder_ready
     return _encoder_ready
+
+# 数据处理状态相关
+def set_process_data_ready(status):
+    """设置数据处理状态"""
+    global _process_data_ready
+    _process_data_ready = status
+    print(f"数据处理状态已更新：{'处理完成' if status else '处理中'}")
+
+def get_process_data_ready():
+    """获取数据是否处理完成"""
+    global _process_data_ready
+    return _process_data_ready
+
+# 数据加载状态相关
+def set_load_data_ready(status):
+    """设置数据加载状态"""
+    global _load_data_ready
+    _load_data_ready = status
+    print(f"数据加载状态已更新：{'加载完成' if status else '加载中'}")
+
+def get_load_data_ready():
+    """获取数据是否加载完成"""
+    global _load_data_ready
+    return _load_data_ready

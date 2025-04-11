@@ -152,15 +152,40 @@
         
         // 定期检查加载状态
         function checkLoadingStatus() {
-            fetch('/check_loading_status')
-                .then(response => response.json())
+            const path = window.location.pathname;
+            let statusUrl = '/check_loading_status'; // 默认检查URL
+            let redirectUrl = '/data_choice'; // 默认跳转URL
+            
+            // 根据当前页面路径确定检查URL和跳转URL
+            if (path.includes('/loading/load_data')) {
+                statusUrl = '/check_load_data_status';
+                redirectUrl = '/qa';
+            } else if (path.includes('/loading/process_data')) {
+                statusUrl = '/check_process_data_status';
+                redirectUrl = '/qa';
+            } else if (path.includes('/loading/model')) {
+                statusUrl = '/check_loading_status';
+                redirectUrl = '/data_choice';
+            }
+            
+            fetch(statusUrl)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('网络响应异常');
+                    }
+                    return response.json();
+                })
                 .then(data => {
                     // 更新状态消息
-                    document.getElementById('statusMessage').textContent = data.message;
+                    const statusElement = document.getElementById('statusMessage');
+                    if (statusElement && data.message) {
+                        statusElement.textContent = data.message;
+                    }
                     
-                    // 如果加载完成，跳转到数据选择页面
+                    // 如果加载完成，跳转到指定页面
                     if (data.completed) {
-                        window.location.href = '/data_choice';
+                        console.log(`加载完成，跳转到: ${redirectUrl}`);
+                        window.location.href = redirectUrl;
                     } else {
                         // 如果未完成，继续检查
                         setTimeout(checkLoadingStatus, 1500);
@@ -168,7 +193,7 @@
                 })
                 .catch(error => {
                     console.error('检查状态出错:', error);
-                    // 出错时继续检查
+                    // 出错时继续检查，但增加延迟
                     setTimeout(checkLoadingStatus, 2000);
                 });
         }

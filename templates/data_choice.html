@@ -229,14 +229,20 @@
                 if (data.success) {
                     // 显示处理中消息
                     document.getElementById('loading').innerHTML = `
-                        <p>选择已保存，正在处理数据，请稍候...</p>
+                        <p>选择已保存，请稍候...</p>
                         <div class="spinner"></div>
                     `;
                     
-                    // 等待后台处理一段时间后跳转到问答页面
-                    setTimeout(() => {
-                        window.location.href = '/qa';
-                    }, 3000); // 等待3秒，给后台处理一些时间
+                    // 检查是否有重定向URL
+                    if (data.redirect) {
+                        // 立即跳转到加载页面
+                        window.location.href = data.redirect;
+                    } else {
+                        // 默认跳转到问答页面
+                        setTimeout(() => {
+                            window.location.href = '/qa';
+                        }, 1000);
+                    }
                 } else {
                     alert('发生错误: ' + data.message);
                     // 重新启用按钮

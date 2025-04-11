@@ -241,21 +241,23 @@
                     // 显示成功消息
                     showMessage("设置已保存，正在加载模型...", 'success');
                     
-                    // 1.5秒后自动跳转到加载页面
-                    setTimeout(() => {
-                        window.location.href = '/loading';
-                    }, 1500);
+                    // 检查是否有重定向URL
+                    if (data.redirect) {
+                        setTimeout(() => {
+                            window.location.href = data.redirect;
+                        }, 1500);
+                    } else {
+                        // 默认跳转到加载页面
+                        setTimeout(() => {
+                            window.location.href = '/loading/model';
+                        }, 1500);
+                    }
                 } else {
                     showMessage(data.message, 'error');
                     // 恢复提交按钮
                     submitButton.disabled = false;
                     submitButton.innerHTML = `
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="button-icon">
-                            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
-                            <polyline points="17 21 17 13 7 13 7 21"></polyline>
-                            <polyline points="7 3 7 8 15 8"></polyline>
-                        </svg>
-                        保存设置
+                        <!-- 按钮图标和文本 -->
                     `;
                 }
             })
