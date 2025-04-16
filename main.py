@@ -15,6 +15,7 @@ import settings  # 导入共享设置模块
 import threading  # 导入线程模块
 import app  # 导入 Flask 应用
 import time  # 导入时间模块
+from sklearn.metrics import f1_score, recall_score, accuracy_score
 
 os.environ["TOKENIZERS_PARALLELISM"] = "true"
 
@@ -117,6 +118,27 @@ async def KGProcess(args, Data, idx, api_key , encoder):
                                 for qa in qa_data:
                                     fout.write(f"Q: {qa['question']}\nA: {qa['answer']}\n\n")  # 问答对格式化                          
 
+# 批量处理数据以提取知识图谱
+async def EvalProcess(args, data, idx, api_key):
+    args.key = api_key              
+    if not args.debug:
+        try:
+            for i in range(len(data) // args.batch_size + (1 if len(data) % args.batch_size != 0 else 0)):
+                start_index = i * args.batch_size
+                end_index = min(start_index + args.batch_size, len(data))  # 确保不超过总长度
+                # 提取一个批次
+                subData = data[start_index:end_index]
+                correct, matched, pred_labels, true_labels = await sllm.acc.evaluate_answer_quality(args,subData)
+        except Exception as e:    
+            if args.store_error:
+                pass
+
+    else:
+        correct, matched, pred_labels, true_labels = await sllm.acc.evaluate_answer_quality(args, data)
+    
+    return correct, matched, pred_labels, true_labels
+                    
+                                    
 # 读取并解析文本数据为完整句子
 def TxtRead(args):
     print('load txt data...')
@@ -151,13 +173,29 @@ def TxtRead(args):
     print(f"文本共 {len(sentences)} 个完整句子")
     return sentences
 
+def TxtRead1(args):
+    print('load txt data...')
+    sentences = []
+    with open(args.data_path, 'r', encoding="utf8") as file:
+        for line in file:
+            line = line.strip()
+            if not line:
+                continue  # 跳过空行
+            # 去除前缀编号（如 1. 2.）
+            if line[0].isdigit():
+                dot_index = line.find('.')
+                if 0 < dot_index < 4:
+                    line = line[dot_index + 1:].strip()
+            sentences.append(line)
+    return sentences
+
 # 解析应用程序的命令行参数
 def parse_args():
     parser = argparse.ArgumentParser(add_help=False)
     
     # setting for openai
     parser.add_argument('--openai_url', default="", type=str, help='The url of openai')
-    parser.add_argument('--key', default="", type=str, help='The key of openai or path of keys')
+    parser.add_argument('--key', default="api_key.txt", type=str, help='The key of openai or path of keys')
     parser.add_argument('--embedding_key', default="", type=str, help='The key of openai or path of keys')
     parser.add_argument('--dynamic_open', default=True, type=bool, help='The key of openai or path of keys')
 
@@ -177,6 +215,8 @@ def parse_args():
     parser.add_argument('--extractQA', default="structllm/prompt_/extractKGQA.json", type=str, help='The prompt pth.')
     parser.add_argument('--extract_keywords', default="structllm/prompt_/extract_keywords.json", type=str, help='The prompt pth.')
     parser.add_argument('--get_answer', default="structllm/prompt_/get_answer_and_triple.json", type=str, help='The prompt pth.')
+    parser.add_argument('--get_answer1', default="structllm/prompt_/get_answer.json", type=str, help='The prompt pth.')
+    parser.add_argument('--acc_prompt', default="structllm/prompt_/judge_acc.json", type=str, help='The prompt pth.')
 
     # setting model
     parser.add_argument('--model', default="gpt-3.5-turbo", type=str, help='The openai model. "gpt-3.5-turbo-0125" and "gpt-4-1106-preview" are supported')
@@ -192,48 +232,41 @@ def parse_args():
     #others
     parser.add_argument('--debug', default=0, type=int)
     parser.add_argument('--flask_port', default=5000, type=int, help='Flask 服务端口')
+    parser.add_argument('--test', default=True, type=bool)
+
+    
     
     args = parser.parse_args()
     return args
 
 # 合并多线程产生的
-def merge_chunks(args):
-    """
-    合并分块文件并恢复原始顺序
-    
-    :param input_dir: 分块文件所在目录
-    :param output_file: 合并后的输出文件
-    :param split_sizes: 每个分块的行数列表
-    """
-    # 确保split_sizes是整数列表
-    data = []
-    # 读取所有分块文件内容
-    for i in range(chunk_num):
-        chunks = []
-        idx = "0" + str(idx) if i < 10 else str(i)  # 00 01 02 ... 29
-        input_dir = args.output_path + "/p-" + idx
-        chunk_file = os.path.join(input_dir, f"chunk_{i}.txt")
-        with open(chunk_file, 'r', encoding='utf-8') as f:
-            chunks.append(f.readlines())
-        data.append(chunks)
-    
-    # 合并并恢复原始顺序
-    merged_lines = []
-    for chunk in chunks:
-        # 过滤空行和分块标记行
-        filtered = [line for line in chunk 
-                   if line.strip() and not line.startswith('***')]
-        merged_lines.extend(filtered)
-    
-    # 写入合并后的文件
-    with open(output_file, 'w', encoding='utf-8') as f:
-        f.writelines(merged_lines)
-    
-    merge_chunks(
-        input_dir="path/to/chunk/files",
-        output_file="merged_output.txt",
-        split_sizes=split_sizes
-    )
+def merge_output_files(base_dir, num_process):
+    merged_dir = os.path.join(base_dir, "merged")
+    os.makedirs(merged_dir, exist_ok=True)
+
+    merged_qa_path = os.path.join(merged_dir, "qa_pairs.txt")
+    merged_triples_path = os.path.join(merged_dir, "triples.txt")
+
+    with open(merged_qa_path, 'w', encoding='utf-8') as qa_out, \
+         open(merged_triples_path, 'w', encoding='utf-8') as triple_out:
+
+        for idx in range(num_process):
+            sub_dir = os.path.join(base_dir, f"p-{idx:02d}")
+            qa_file = os.path.join(sub_dir, "qa_pairs.txt")
+            triple_file = os.path.join(sub_dir, "triples.txt")
+
+            # 合并 qa_pairs
+            if os.path.exists(qa_file):
+                with open(qa_file, 'r', encoding='utf-8') as f:
+                    qa_out.writelines(f.readlines())
+
+            # 合并 triples
+            if os.path.exists(triple_file):
+                with open(triple_file, 'r', encoding='utf-8') as f:
+                    triple_out.writelines(f.readlines())
+
+    print(f"合并完成，输出路径：{merged_qa_path}, {merged_triples_path}")
+
 
 # 应用程序的主入口
 async def main():

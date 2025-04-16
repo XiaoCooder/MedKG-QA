@@ -5,10 +5,10 @@ task_name=processed_Interview
 GPU=0
 
 model=deepseek-chat
-input=zhongyituina
+input=ceshi
 encoder_model=SentenceBERT
 batch_size=10
-p=1
+p=2
 args=$@
 
 CUDA_VISIBLE_DEVICES=$GPU python main.py \
@@ -22,6 +22,7 @@ CUDA_VISIBLE_DEVICES=$GPU python main.py \
 --summary_prompt_path structllm/prompt_/summary_prompt.json \
 --character_path input/character.txt \
 --debug 1 \
+--test False \
 --num_process $p \
 --batch_size ${batch_size} \
 --encoder_model ${encoder_model} \

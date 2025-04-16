@@ -1,15 +1,19 @@
 import structllm as sllm
 import openai
+import asyncio
 
-def cot(args, question, corpus, path):
+async def cot(args, question, corpus):
     llm = sllm.llm.gpt(args)
-    data = corpus.load_triples(path)
-    #获取三元组列表
-    triples_list = data[0]
-    triples_text = "\n".join([f"{h},{r},{t}" for h, r, t in triples_list])
+    #获取该问题匹配到的三元组列表
+    matched_results = sllm.graph.triplesProcess(args, corpus, question)
+    matched_triples = []
+    for item in matched_results:
+        for triple in item["matched_triples"]:
+            matched_triples.append(triple)
+    print(matched_triples)
+    triples_text = ",".join([f"[{h},{r},{t}]" for h, r, t in matched_triples])
     #把三元组的内容和question输入模型进行问答   
     answers = []
-    used_triples = []
     total_num = 0
     flag = True
     max_retries = 3
@@ -23,19 +27,10 @@ def cot(args, question, corpus, path):
         for response in responses:
             try:
                 result = response.choices[0].message.content
-                answer_response, used_triples_response = sllm.align.get_answer_and_triples(result)
-                if answer_response and answer_response not in answers:
-                    answers.append(answer_response)
-
-            # 添加三元组（一个答案可能涉及多个三元组）
-                if used_triples_response:
-                    if isinstance(used_triples_response[0], list):  # 如果是多个三元组
-                        for triple in used_triples_response:
-                            if triple not in used_triples:
-                                used_triples.append(triple)
-                    else:  # 只有一个三元组
-                        if used_triples_response not in used_triples:
-                            used_triples.append(used_triples_response)             
+                #answer_response = sllm.align.get_answer_and_triples(result)
+                if result and result not in answers:
+                    answers.append(result)
+             
             except openai.BadRequestError as e: # 非法输入 '$.input' is invalid. query返回结果为：请输入详细信息等
                 print(e)
                 total_num += 1
@@ -59,9 +54,8 @@ def cot(args, question, corpus, path):
                 print(e)
                 total_num += 1 # 防止卡死
                 continue
-            flag = False
-        #import pdb;pdb.set_trace()        
-    return answers, used_triples
-    #输出答案和三元组列表
+            flag = False       
+    return answers, matched_triples
+
 
     

@@ -1,23 +1,27 @@
 import structllm as sllm
 import json
 import os
+from tqdm import tqdm
+import asyncio
+from aiomultiprocess import Pool
 
 class user_qa:
-    def __init__(self, args, corpus, path):
+    def __init__(self, args, corpus, path, qs_path):
         self.args = args
         self.corpus = corpus
         self.path = path
+        self.qs_path = qs_path
 
-    def ask_question(self):
-
-        question = input("please input your question: ")
-        if question.lower() in ["exit"]:
-            print("bye!")
-            return False
-        else: 
-            answers, used_triples = sllm.cot.cot(self.args, question, self.corpus, self.path)
-            #import pdb;pdb.set_trace()
+    async def ask_question(self, question = ""):
+        if question.__eq__(""): 
+            question = input("please input your question: ")
+            if question.lower() in ["exit"]:
+                print("bye!")
+                return False
+            answers, used_triples = sllm.cot.cot(self.args, question, self.corpus)
             used_triples_text = ", ".join([f"[{h},{r},{t}]" for h, r, t in used_triples])
+            if not answers:
+                answers = ["未找到答案"]  # 如果是空列表，设置一个默认值
             qa_item = {
                 "Q": question,
                 "A": answers[0],
@@ -42,7 +46,16 @@ class user_qa:
             #处理三元组变为一个子图
             
             print(answers[0])
-
+        else:
+            answers, used_triples = await sllm.cot.cot(self.args, question, self.corpus)
+            used_triples_text = ", ".join([f"[{h},{r},{t}]" for h, r, t in used_triples])
+            if not answers:
+                answers = ["未找到答案"]  # 如果是空列表，设置一个默认值
+            return  {
+                "Q": question,
+                "A": answers[0],
+                "used_triples": used_triples_text
+            }
         return True
     
     def process_web_question(self, question):
@@ -106,6 +119,7 @@ class user_qa:
                if not self.ask_question():
                 break
             return True
+            
 
 
     
