@@ -4,78 +4,72 @@ from typing import List, Tuple
 import structllm as sllm
 import openai
 import os
+from sentence_transformers import util
 
 
-def extract_keywords(args,questions_path):
+def extract_keywords(args,question):
     """
     利用大模型对输入数据进行关键词提取
     """
-    questions = read_questions(questions_path)
     llm = sllm.llm.gpt(args)
     keywords_data = []
     total_num = 0
     flag = True
     max_retries = 3
     retry_count = 0
-    batch_size = 10
     while flag and retry_count < max_retries:
         retry_count += 1
         # 构造关键词提取的提示，task 设置为 "extract_keywords"
-        for i in range(len(questions)// batch_size + (1 if len(questions) % batch_size != 0 else 0)):
-            start_idx = i*batch_size
-            end_idx = min(start_idx + batch_size, len(questions))
-            subquestions = questions[start_idx:end_idx]
-            query_prompt = sllm.query_prompt.query_prompt(args, subquestions)
-            query_prompt.create_prompt(task="extract_keywords")
+        query_prompt = sllm.query_prompt.query_prompt(args)
+        query_prompt.create_prompt(task="extract_keywords",question=question)
 
-            # 调用大模型获取关键词及其类别
-            responses_keywords = llm.get_response(query_prompt.naive_prompt)
-            for response in responses_keywords:
-                try:
-                    result = response.choices[0].message.content       # 关键词列表（格式：[['xxx', 'head', 'xxx', 'relation', 'xxx', 'tail'], [...], [...] ]）
-                    extracted_keywords = sllm.align.get_keywords(result)  
-                    for keyword_group in extracted_keywords:  # 遍历每个关键词组
-                        keyword_dict = {"keyword_head": "", "keyword_relation": "", "keyword_tail": ""}  # 初始化为空字符串
+        # 调用大模型获取关键词及其类别
+        responses_keywords = llm.get_response(query_prompt.naive_prompt)
+        for response in responses_keywords:
+            try:
+                result = response.choices[0].message.content       # 关键词列表（格式：[['xxx', 'head', 'xxx', 'relation', 'xxx', 'tail'], [...], [...] ]）
+                extracted_keywords = sllm.align.get_keywords(result)  
+                for keyword_group in extracted_keywords:  # 遍历每个关键词组
+                    keyword_dict = {"keyword_head": "", "keyword_relation": "", "keyword_tail": ""}  # 初始化为空字符串
 
-                        for i in range(0, len(keyword_group), 2):  # 每两个元素一组
-                            keyword, keyword_type = keyword_group[i], keyword_group[i + 1]
+                    for i in range(0, len(keyword_group), 2):  # 每两个元素一组
+                        keyword, keyword_type = keyword_group[i], keyword_group[i + 1]
 
-                            if keyword_type == "head":  
-                                keyword_dict[f"keyword_{keyword_type}"] = keyword  # 存入关键词（即使是 ""）
-                            if keyword_type == "relation":  
-                                keyword_dict[f"keyword_{keyword_type}"] = keyword  # 存入关键词（即使是 ""）
-                            if keyword_type == "tail":  
-                                keyword_dict[f"keyword_{keyword_type}"] = keyword  # 存入关键词（即使是 ""）
+                        if keyword_type == "head":  
+                            keyword_dict[f"keyword_{keyword_type}"] = keyword  # 存入关键词（即使是 ""）
+                        if keyword_type == "relation":  
+                            keyword_dict[f"keyword_{keyword_type}"] = keyword  # 存入关键词（即使是 ""）
+                        if keyword_type == "tail":  
+                            keyword_dict[f"keyword_{keyword_type}"] = keyword  # 存入关键词（即使是 ""）
 
-                        keywords_data.append(keyword_dict)  # 存入最终的关键词字典
+                    keywords_data.append(keyword_dict)  # 存入最终的关键词字典
 
-                except openai.BadRequestError as e:  # 处理无效输入
-                    print(e)
-                    total_num += 1
-                    continue
+            except openai.BadRequestError as e:  # 处理无效输入
+                print(e)
+                total_num += 1
+                continue
 
 
-                except IndexError as e: 
-                    print(e)
-                    total_num += 1 # 防止卡死
-                    continue
+            except IndexError as e: 
+                print(e)
+                total_num += 1 # 防止卡死
+                continue
 
-                except openai.APITimeoutError as e: # 超时
-                    print(e)
-                    total_num += 1 # 防止卡死
-                    continue
+            except openai.APITimeoutError as e: # 超时
+                print(e)
+                total_num += 1 # 防止卡死
+                continue
 
-                except ValueError as e: # maximum context length
-                    print(e)
-                    continue
+            except ValueError as e: # maximum context length
+                print(e)
+                continue
 
-                except Exception as e:
-                    print(f"提取关键词时出错: {e}")
-                    total_num += 1
-                    continue
-                flag = False     
+            except Exception as e:
+                print(f"提取关键词时出错: {e}")
+                total_num += 1
+                continue
+            flag = False     
     return keywords_data
-
 
 def read_questions(questions_path):
     """
@@ -113,7 +107,7 @@ def split_qa_pairs(file_path):
     返回：
         tuple: (questions.txt 路径, answers.txt 路径)
     """
-    qa_pairs_path = os.path.join(file_path, "qa_pairs.txt")
+    qa_pairs_path = file_path
 
     if not os.path.exists(qa_pairs_path):
         raise FileNotFoundError(f"文件 {qa_pairs_path} 不存在")
@@ -146,15 +140,61 @@ def split_qa_pairs(file_path):
     with open(answers_path, "w", encoding="utf-8") as fa:
         fa.write("\n".join(answers))
 
-    return questions_path, answers_path
+    return questions_path
+
+def merge_similar_relations(triples_relation_list, retriever, triples_list, threshold=0.8):
+    """
+    使用SentenceBertRetriever对三元组关系进行聚类合并  返回主干关系映射表与合并后的列表
+    :param triples_relation_list: 所有关系（可能重复）
+    :param retriever: SentenceBertRetriever 实例
+    :param threshold: 相似度合并的阈值，建议在 0.75 ~ 0.9 间调整
+    :return: relation_map, merged_relations
+    """
+    # 获取去重的关系列表
+    unique_relations = list(set(triples_relation_list))
+
+    # 获取嵌入
+    embeddings = retriever.retrieve_model.encode(unique_relations, convert_to_tensor=True)
+
+    # 计算相似度矩阵
+    cos_sim = util.cos_sim(embeddings, embeddings)
+
+    # 聚类合并
+    relation_map = {}
+    merged_groups = {}
+    used = set()
+
+    for i, rel in enumerate(unique_relations):
+        if rel in used:
+            continue
+        merged_groups[rel] = [rel]
+        relation_map[rel] = rel  # 主干映射
+        for j in range(i + 1, len(unique_relations)):
+            if cos_sim[i][j] >= threshold:
+                sim_rel = unique_relations[j]
+                if sim_rel not in used:
+                    merged_groups[rel].append(sim_rel)
+                    relation_map[sim_rel] = rel
+                    used.add(sim_rel)
+
+    # 构建合并后的关系列表
+    merged_relations = [relation_map.get(rel, rel) for rel in triples_relation_list]
+    updated_triples_list = []
+    if triples_list:
+        for head, relation, tail in triples_list:
+            merged_relation = relation_map.get(relation, relation)
+            updated_triples_list.append(head, merged_relation, tail)
+
+    return merged_relations, updated_triples_list
+
 
 class graph(): 
     def __init__(self, args, path):
         self.args = args
         self.path = path
 
-    def load_triples(self, path):
-        triples_path = os.path.join(path, "triples.txt")
+    def load_triples(self):
+        triples_path = os.path.join(self.path, "triples.txt")
         triples_head_set = set()
         triples_relation_set = set()
         triples_tail_set = set()
@@ -162,7 +202,7 @@ class graph():
         chunk_pattern = "***"
 
         if not os.path.exists(triples_path):
-            raise FileNotFoundError(f"triples.txt 不存在于路径: {path}")
+            raise FileNotFoundError(f"triples.txt 不存在于路径: {self.path}")
 
         try:
             with open(triples_path, 'r', encoding='utf-8') as f:
@@ -196,10 +236,13 @@ class graph():
         triples_relation_list = list(dict.fromkeys([t[1] for t in triples_list]))
         triples_tail_list = list(dict.fromkeys([t[2] for t in triples_list]))
         
-        return triples_list, triples_head_list, triples_relation_list, triples_tail_list
+        retriever = sllm.align.SentenceBertRetriever(triples_relation_list)
+        merged_relation_list, updated_triples_list = merge_similar_relations(triples_relation_list, retriever, triples_list)
+        
+        return updated_triples_list, triples_head_list, merged_relation_list, triples_tail_list
 
 
-def match_and_find_triples(args, path, keywords_data):
+def match_and_find_triples(args, corpus, keywords_data):
     """
     遍历 keywords_data 使用 SentenceBertRetriever 在 triples_list 中匹配合适的三元组。
 
@@ -217,8 +260,11 @@ def match_and_find_triples(args, path, keywords_data):
     """
 
     # 加载三元组数据
-    load_triples = graph(args,path)
-    triples_list, triples_head_list, triples_relation_list, triples_tail_list = load_triples.load_triples(path)
+    
+    triples_list = corpus[0]
+    triples_head_list = corpus[1]
+    triples_relation_list = corpus[2]
+    triples_tail_list = corpus[3]
     # 如果三元组列表为空，直接返回
     if not triples_list or not triples_head_list or not triples_relation_list or not triples_tail_list:
         return []
@@ -231,7 +277,8 @@ def match_and_find_triples(args, path, keywords_data):
     matched_results = []  # 存放匹配到的三元组
     # 遍历 keywords_data 中的每个关键词字典
     for keyword_idx, keywords in enumerate(keywords_data):
-        matched_head, matched_relation, matched_tail = None, None, None
+        matched_head, matched_tail = None, None
+        matched_relation = [None,None]
         # 处理 head
         if keywords["keyword_head"].strip() and keywords_head_match:
             head_index_list = keywords_head_match.get_topk_candidates(1, keywords["keyword_head"])
@@ -301,9 +348,6 @@ def match_and_find_triples(args, path, keywords_data):
             elif matched_head is not None and matched_relation is not None and matched_tail is not None:
                 match = (head == matched_head) and (relation == matched_relation) and (tail == matched_tail)
             
-            # 原始情况：全部为None（保留原有逻辑）
-            # elif matched_head is None and matched_relation is None and matched_tail is None:
-            #     match = True
             
             if match:
                 current_matches.append(triple)
@@ -372,12 +416,12 @@ def write_qa_and_matched_results_to_new_file(path, matched_results):
         return None
 
 
-def triplesProcess(args, path):
-    questions_path, answers_path = split_qa_pairs(path)
-    keywords_data = extract_keywords(args,questions_path)
-    matched_results = match_and_find_triples(args, path, keywords_data)
-    write_qa_and_matched_results_to_new_file(path, matched_results)
-    #import pdb;pdb.set_trace()
+def triplesProcess(args, corpus, question):
+    keywords_data = extract_keywords(args,question)
+    matched_results = match_and_find_triples(args, corpus, keywords_data)
+    #write_qa_and_matched_results_to_new_file(path, matched_results)
+    return matched_results
+    
     
 
 

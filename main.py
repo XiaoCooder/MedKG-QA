@@ -11,6 +11,7 @@ from sentence_transformers import SentenceTransformer
 import torch
 from chromadb.utils import embedding_functions
 from chromadb.api.types import Documents, EmbeddingFunction, Embeddings, Images
+from sklearn.metrics import f1_score, recall_score, accuracy_score
 
 os.environ["TOKENIZERS_PARALLELISM"] = "true"
 
@@ -71,6 +72,27 @@ async def KGProcess(args, Data, idx, api_key , encoder):
                                 for qa in qa_data:
                                     fout.write(f"Q: {qa['question']}\nA: {qa['answer']}\n\n")  # 问答对格式化                          
 
+# 批量处理数据以提取知识图谱
+async def EvalProcess(args, data, idx, api_key):
+    args.key = api_key              
+    if not args.debug:
+        try:
+            for i in range(len(data) // args.batch_size + (1 if len(data) % args.batch_size != 0 else 0)):
+                start_index = i * args.batch_size
+                end_index = min(start_index + args.batch_size, len(data))  # 确保不超过总长度
+                # 提取一个批次
+                subData = data[start_index:end_index]
+                correct, matched, pred_labels, true_labels = await sllm.acc.evaluate_answer_quality(args,subData)
+        except Exception as e:    
+            if args.store_error:
+                pass
+
+    else:
+        correct, matched, pred_labels, true_labels = await sllm.acc.evaluate_answer_quality(args, data)
+    
+    return correct, matched, pred_labels, true_labels
+                    
+                                    
 # 读取并解析文本数据为完整句子
 def TxtRead(args):
     print('load txt data...')
@@ -105,13 +127,29 @@ def TxtRead(args):
     print(f"文本共 {len(sentences)} 个完整句子")
     return sentences
 
+def TxtRead1(args):
+    print('load txt data...')
+    sentences = []
+    with open(args.data_path, 'r', encoding="utf8") as file:
+        for line in file:
+            line = line.strip()
+            if not line:
+                continue  # 跳过空行
+            # 去除前缀编号（如 1. 2.）
+            if line[0].isdigit():
+                dot_index = line.find('.')
+                if 0 < dot_index < 4:
+                    line = line[dot_index + 1:].strip()
+            sentences.append(line)
+    return sentences
+
 # 解析应用程序的命令行参数
 def parse_args():
     parser = argparse.ArgumentParser(add_help=False)
     
     # setting for openai
     parser.add_argument('--openai_url', default="", type=str, help='The url of openai')
-    parser.add_argument('--key', default="", type=str, help='The key of openai or path of keys')
+    parser.add_argument('--key', default="api_key.txt", type=str, help='The key of openai or path of keys')
     parser.add_argument('--embedding_key', default="", type=str, help='The key of openai or path of keys')
     parser.add_argument('--dynamic_open', default=True, type=bool, help='The key of openai or path of keys')
 
@@ -155,52 +193,46 @@ def parse_args():
     return args
 
 # 合并多线程产生的
-def merge_chunks(args):
-    """
-    合并分块文件并恢复原始顺序
-    
-    :param input_dir: 分块文件所在目录
-    :param output_file: 合并后的输出文件
-    :param split_sizes: 每个分块的行数列表
-    """
-    # 确保split_sizes是整数列表
-    data = []
-    # 读取所有分块文件内容
-    for i in range(chunk_num):
-        chunks = []
-        idx = "0" + str(idx) if i < 10 else str(i)  # 00 01 02 ... 29
-        input_dir = args.output_path + "/p-" + idx
-        chunk_file = os.path.join(input_dir, f"chunk_{i}.txt")
-        with open(chunk_file, 'r', encoding='utf-8') as f:
-            chunks.append(f.readlines())
-        data.append(chunks)
-    
-    # 合并并恢复原始顺序
-    merged_lines = []
-    for chunk in chunks:
-        # 过滤空行和分块标记行
-        filtered = [line for line in chunk 
-                   if line.strip() and not line.startswith('***')]
-        merged_lines.extend(filtered)
-    
-    # 写入合并后的文件
-    with open(output_file, 'w', encoding='utf-8') as f:
-        f.writelines(merged_lines)
-    
-    merge_chunks(
-        input_dir="path/to/chunk/files",
-        output_file="merged_output.txt",
-        split_sizes=split_sizes
-    )
+def merge_output_files(base_dir, num_process):
+    merged_dir = os.path.join(base_dir, "merged")
+    os.makedirs(merged_dir, exist_ok=True)
+
+    merged_qa_path = os.path.join(merged_dir, "qa_pairs.txt")
+    merged_triples_path = os.path.join(merged_dir, "triples.txt")
+
+    with open(merged_qa_path, 'w', encoding='utf-8') as qa_out, \
+         open(merged_triples_path, 'w', encoding='utf-8') as triple_out:
+
+        for idx in range(num_process):
+            sub_dir = os.path.join(base_dir, f"p-{idx:02d}")
+            qa_file = os.path.join(sub_dir, "qa_pairs.txt")
+            triple_file = os.path.join(sub_dir, "triples.txt")
+
+            # 合并 qa_pairs
+            if os.path.exists(qa_file):
+                with open(qa_file, 'r', encoding='utf-8') as f:
+                    qa_out.writelines(f.readlines())
+
+            # 合并 triples
+            if os.path.exists(triple_file):
+                with open(triple_file, 'r', encoding='utf-8') as f:
+                    triple_out.writelines(f.readlines())
+
+    print(f"合并完成，输出路径：{merged_qa_path}, {merged_triples_path}")
+
 
 
       
 # 应用程序的主入口
 async def main():
     args = parse_args()
-    if args.test:
-        sllm.acc.evaluate_answer_quality(args)
-        return
+    
+    
+    # if args.test:
+    #     sllm.acc.evaluate_answer_quality(args)
+    #     return
+    
+    
     #load api-key
     if not args.key.startswith("sk-"):
         with open(args.key, "r",encoding='utf-8') as f:
@@ -210,6 +242,7 @@ async def main():
     else:
         all_keys = []
         all_keys.append(args.key)
+        
     encoder = sllm.retrieve.Encoder(args.encoder_model)
     flag =True
 
@@ -237,13 +270,9 @@ async def main():
             await sllm.retrieve.rebuild_collection(name="qa_pairs" ,encoder = encoder)
             
             #loda interview data
-            data = TxtRead(args)
-            # data_path_ceshi = "/home/wcy/code/KG-MedQA-v1.0/data_ceshi"
-            # with open(data_path_ceshi, 'w', encoding='utf-8') as f:
-            #      for d in data:
-            #           f.write(f"{d}\n")
-            # import pdb;pdb.set_trace()
+            data = TxtRead1(args)
             #process
+            
             if args.num_process == 1:
                 await KGProcess(args, data, -1, all_keys[0], encoder)
             else:
@@ -260,30 +289,80 @@ async def main():
                 async with Pool() as pool:
                         tasks = [pool.apply(KGProcess, args=(args, split_data[idx], idx, all_keys[idx], encoder)) for idx in range(args.num_process)]
                         await asyncio.gather(*tasks)
-                #merge txt
-                #merge_chunks(args)
+                        merge_output_files(base_dir=args.output_path, num_process=args.num_process)
             
             #Q&A system
             await sllm.retrieve.get_path_collection_and_write(path = args.output_path ,encoder=encoder)
             args.qa_output_path = os.path.join(args.output_path, 'qa_history.txt')
             qa_bot = sllm.user_qa.user_qa(args)
-            qa_bot.start()  
+            qa_bot.start( test=True, all_keys = all_keys )  
             
         elif user_input == "yes":
 
             #Q&A system
             response = await sllm.retrieve.get_output_path(encoder=encoder)  # 先 await 获取返回值
             path = [candidate_content.get('path') for candidate_content in response['metadatas'][0]][0]
-            sllm.graph.triplesProcess(args, path)
-            #import pdb;pdb.set_trace()
-            args.qa_output_path = os.path.join(path, 'qa_history.json')
-            #print(args.qa_output_path)
-            
+            current_path = os.path.join(path,'merged')
+            qa_pairs_path = os.path.join(current_path,'qa_pairs.txt')
+            qs_path = sllm.graph.split_qa_pairs(qa_pairs_path)
+            args.qa_output_path = os.path.join(current_path, 'qa_history.json')
             #读取数据库内容
-            corpus = sllm.graph.graph(args,path)
-            qa_bot = sllm.user_qa.user_qa(args,corpus,path)
-            qa_bot.start(True)  
-        
+            
+            corpus_ = sllm.graph.graph(args,current_path)
+            corpus = corpus_.load_triples()
+            qa_bot = sllm.user_qa.user_qa(args, corpus, current_path, qs_path)
+            await qa_bot.start(test = True, all_keys = all_keys)
+
+            
+            #评测模块
+            with open(args.qa_output_path, 'r', encoding='utf-8') as f:
+                qa_data = json.load(f)
+                
+            if args.num_process == 1:
+                corrects, matcheds, pred_labels, true_labels = await EvalProcess(args, qa_data, -1, all_keys[0])
+            else:
+                num_each_split = int(len(qa_data) / args.num_process)
+                split_data = []
+                for idx in range(args.num_process):
+                        start = idx * num_each_split
+                        if idx == args.num_process - 1:
+                            end = max((idx + 1) * num_each_split, len(qa_data))
+                            split_data.append(qa_data[start:end])
+                        else:
+                            end = (idx + 1) * num_each_split
+                            split_data.append(qa_data[start:end])
+                async with Pool() as pool:
+                        tasks = [pool.apply(EvalProcess, args=(args, split_data[idx], idx, all_keys[idx])) for idx in range(args.num_process)]
+                        results = await asyncio.gather(*tasks)
+                      
+                            # 合并所有进程的结果
+                corrects = sum([r[0] for r in results])
+                matcheds = sum([r[1] for r in results])
+                pred_labels = []
+                true_labels = []
+                for r in results:
+                    pred_labels.extend(r[2])
+                    true_labels.extend(r[3])
+                    # 计算指标
+                total = len(true_labels)  # 总样本数
+                # 计算准确率、召回率和F1分数
+                accuracy = corrects / total if total > 0 else 0
+                recall = matcheds / total if total > 0 else 0
+                # 确保两个列表长度一致
+                min_len = min(len(true_labels), len(pred_labels))
+                
+                if min_len > 0:
+                    f1 = f1_score(true_labels[:min_len], pred_labels[:min_len])
+                else:
+                    f1 = 0
+                    
+                # 打印结果
+                print(f"Total samples: {total}")
+                print(f"Accuracy (correct/total): {accuracy:.4f}")
+                print(f"Recall (matched/total): {recall:.4f}")
+                print(f"F1 Score: {f1:.4f}")
+                #sllm.acc.evaluate_answer_quality(args,args.qa_output_path)
+            
         else: continue
 
 if __name__=="__main__":

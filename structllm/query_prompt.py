@@ -3,7 +3,7 @@ import json
 import asyncio
 
 class query_prompt():
-    def __init__(self, args, data, character = None, names=None, descriptions=None):
+    def __init__(self, args, data=None, character = None, names=None, descriptions=None):
         self.data = data
         self.args = args
         self.character = character
@@ -63,59 +63,6 @@ class query_prompt():
              #print(f"JSON 解码错误: {e}")
              pass
          
-        elif task == "summary":
-         try:
-           with open(args.summary_prompt_path,'r',encoding = 'utf-8') as json_file:
-                self.naive_prompt = json.load(json_file)
-                self.naive_prompt.append(
-                         {
-                             "role": "user",
-                             "content": self.add_query_Prompt(self.data)
-                         }
-                )
-         except json.JSONDecodeError as e:
-             #print(f"JSON 解码错误: {e}")
-             pass
-         
-        elif task == "summary_rerank":
-         try:
-           with open(args.reranker_prompt,'r',encoding = 'utf-8') as json_file:
-                self.naive_prompt = json.load(json_file)
-                self.naive_prompt.append(
-                         {
-                             "role": "user",
-                             "content": self.add_ask_Prompt(self.data, question, task)
-                         }
-                )
-         except json.JSONDecodeError as e:
-             #print(f"JSON 解码错误: {e}")
-             pass
-        elif task == "context_rerank":
-         try:
-           with open(args.reranker_prompt,'r',encoding = 'utf-8') as json_file:
-                self.naive_prompt = json.load(json_file)
-                self.naive_prompt.append(
-                         {
-                             "role": "user",
-                             "content": self.add_ask_Prompt(self.data, question, task)
-                         }
-                )
-         except json.JSONDecodeError as e:
-             #print(f"JSON 解码错误: {e}")
-             pass
-        elif task == "qas_rerank":
-         try:
-           with open(args.reranker_prompt,'r',encoding = 'utf-8') as json_file:
-                self.naive_prompt = json.load(json_file)
-                self.naive_prompt.append(
-                         {
-                             "role": "user",
-                             "content": self.add_ask_Prompt(self.data, question, task)
-                         }
-                )
-         except json.JSONDecodeError as e:
-             #print(f"JSON 解码错误: {e}")
-             pass
          
         elif task == "get_answer":
          try:
@@ -227,11 +174,9 @@ class query_prompt():
             Prompt = data_prompt
         
         if task == "extract_keywords": 
-            data_prompt = ''  
-            for i in range(len(data)):
-               task_prompt = f"我需要你从下面的数据中提取出关键词:{data[i]}\n"
-               data_prompt = data_prompt + task_prompt
-            Prompt = data_prompt
+            if(question):
+                Prompt = "从下面的问题中提取出关键词:" + question
+            
 
         if task == "get_answer":
             if isinstance(data, list):
@@ -239,7 +184,7 @@ class query_prompt():
             else:
                 Prompt = data
             if(question):
-                Prompt = Prompt + "请使用给出的三元组列表中的三元组来回答问题，只需要输出最终的答案和所使用的三元组:" + question
+                Prompt = Prompt + "请根据给出的三元组列表中的三元组来回答问题，只需要输出最终的答案:" + question
         
         if task == "get_answer1":
             if isinstance(data, list):
@@ -248,15 +193,20 @@ class query_prompt():
                 Prompt = data
             if(question):
                 Prompt = Prompt + "请使用给出的三元组来回答问题，只需要输出最终的答案:" + question
-        
-        if task == "judge_acc":
-            len1 = len(data)
-            data_prompt = ''
-            for i in range(len1):
-                task_prompt = f"评估下面的生成答案与标准答案是否相似:{data[i]}{question[i]}\n"
-                data_prompt = data_prompt + task_prompt
-            Prompt = data_prompt
 
+        if task == "judge_acc":
+            if isinstance(data, list):
+                Prompt = "\n".join([f"预测: {x['pred']}\n标准: {x['gold']}" for x in data])
+            else:
+                Prompt = data
+            if isinstance(question, list):
+                question_str = "\n".join([json.dumps(q, ensure_ascii=False) if isinstance(q, dict) else str(q) for q in question])
+            else:
+                question_str = str(question)
+
+                Prompt = question_str + "\n对于前面的问题，评估下面的生成答案与标准答案是否相似。\n" + Prompt
+
+        
         return Prompt
     
    

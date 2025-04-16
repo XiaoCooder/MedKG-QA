@@ -140,19 +140,12 @@ def get_keywords(text):
     return extracted_keywords
 
 def get_answer_and_triples(text):
-    # 提取答案部分
-    answer_match = re.search(r'答案\s*:\s*(.*?)\s*/\s*使用到的三元组', text, re.DOTALL)
+    # 只提取“答案:”后面的内容作为答案
+    answer_match = re.search(r'答案\s*[:：]\s*(.+)', text, re.DOTALL)
     answer = answer_match.group(1).strip() if answer_match else None
 
-    # 提取所有完整三元组 "(..., ..., ...)"，确保只提取括号包裹的三元组
-    triple_matches = re.findall(r'\(([^()]+?,[^()]+?,[^()]+?)\)', text)
-    used_triples = []
-    for match in triple_matches:
-        parts = [item.strip() for item in match.split(',', maxsplit=2)]
-        if len(parts) == 3:
-            used_triples.append(parts)
+    return answer
 
-    return answer, used_triples
 
 def get_answer(text):
     # 提取 "答案:" 后面的所有内容作为答案

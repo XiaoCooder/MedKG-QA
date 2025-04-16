@@ -8,11 +8,10 @@ model=deepseek-chat
 input=ceshi
 encoder_model=SentenceBERT
 batch_size=10
-p=1
+p=2
 args=$@
 
 CUDA_VISIBLE_DEVICES=$GPU python main.py \
---key sk-e5c6b53b47694c6fbf94098c9678daeb \
 --openai_url https://api.deepseek.com/v1 \
 --data_path input/ceshi.txt \
 --model ${model} \
@@ -22,6 +21,7 @@ CUDA_VISIBLE_DEVICES=$GPU python main.py \
 --summary_prompt_path structllm/prompt_/summary_prompt.json \
 --character_path input/character.txt \
 --debug 1 \
+--test False \
 --num_process $p \
 --batch_size ${batch_size} \
 --encoder_model ${encoder_model} \
