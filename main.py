@@ -335,6 +335,16 @@ async def main():
     user_input = settings.get_data_choice()
     print(f"用户选择了: {user_input}")
 
+    #load api-key
+    if not args.key.startswith("sk-"):
+        with open(args.key, "r",encoding='utf-8') as f:
+            all_keys = f.readlines()
+            all_keys = [line.strip('\n') for line in all_keys]
+            assert len(all_keys) >= args.num_process, (len(all_keys), args.num_process)
+    else:
+        all_keys = []
+        all_keys.append(args.key)
+    
     if user_input == "no":
         #create DB （如果第一次安装可能没有数据）
         await sllm.retrieve.get_collection(name="path", encoder=encoder)
@@ -363,7 +373,9 @@ async def main():
         #           f.write(f"{d}\n")
         # import pdb;pdb.set_trace()
         #process
+        print(args.num_process)
         if args.num_process == 1:
+            print("args.num_process == 1")
             await KGProcess(args, data, -1, all_keys[0] if 'all_keys' in locals() else args.key, encoder)
         else:
             num_each_split = int(len(data) / args.num_process)
@@ -401,18 +413,19 @@ async def main():
         #Q&A system
         response = await sllm.retrieve.get_output_path(encoder=encoder)  # 先 await 获取返回值
         path = [candidate_content.get('path') for candidate_content in response['metadatas'][0]][0]
-        sllm.graph.triplesProcess(args, path)
-
-        
-    
-        #import pdb;pdb.set_trace()
-        args.qa_output_path = os.path.join(path, 'qa_history.json')
-        print(args.qa_output_path)
+        current_path = os.path.join(path,'merged')
+        print(path)
+        print(current_path)
+        qa_pairs_path = os.path.join(current_path,'qa_pairs.txt')
+        print(qa_pairs_path)
+        qs_path = sllm.graph.split_qa_pairs(qa_pairs_path)
+        print(qs_path)
+        args.qa_output_path = os.path.join(current_path, 'qa_history.json')
    
         #读取数据库内容
-        corpus = sllm.graph.graph(args,path)
-
-        qa_bot = sllm.user_qa.user_qa(args,corpus,path)
+        corpus_ = sllm.graph.graph(args,current_path)
+        corpus = corpus_.load_triples()
+        qa_bot = sllm.user_qa.user_qa(args, corpus, current_path, qs_path)
         settings.set_qa_bot(qa_bot)
         # 加载完成后，更新状态
         settings.set_load_data_ready(True)

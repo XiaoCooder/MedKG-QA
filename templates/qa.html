@@ -21,6 +21,8 @@
             --answer-border: #dcedc8;
             --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             --border-radius: 8px;
+            --sidebar-width: 260px;
+            --sidebar-bg: #f0f2f5;
         }
 
         * {
@@ -34,57 +36,186 @@
             background-color: var(--bg-color);
             color: var(--text-color);
             line-height: 1.6;
-            padding: 20px;
             min-height: 100vh;
             display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
+            overflow: hidden;
         }
 
-        .container {
+        .app-container {
+            display: flex;
             width: 100%;
-            max-width: 800px;
-            box-shadow: var(--shadow);
+            height: 100vh;
+        }
+
+        /* 侧边栏样式 */
+        .sidebar {
+            width: var(--sidebar-width);
+            background-color: var(--sidebar-bg);
+            border-right: 1px solid var(--border-color);
+            padding: 20px;
+            height: 100vh;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-header {
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 20px;
+        }
+
+        .sidebar-title {
+            color: var(--primary-color);
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 10px;
             border-radius: var(--border-radius);
             background-color: var(--card-bg);
-            padding: 30px;
-            margin: 20px auto;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: var(--primary-color);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+
+        .user-name {
+            font-weight: 500;
+        }
+
+        .upload-button {
+            background-color: var(--card-bg);
+            color: var(--primary-color);
+            border: 1px solid var(--primary-color);
+            padding: 10px 15px;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .upload-button:hover {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .upload-icon {
+            margin-right: 8px;
+        }
+
+        /* 历史记录相关样式已移除 */
+
+        /* 主内容区域样式 */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
         }
 
         header {
             text-align: center;
-            margin-bottom: 30px;
+            padding: 15px 0;
+            border-bottom: 1px solid var(--border-color);
+            background-color: var(--card-bg);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
         }
 
         h1 {
             color: var(--primary-color);
-            font-size: 2.2rem;
+            font-size: 1.8rem;
             font-weight: 700;
-            margin-bottom: 10px;
         }
 
-        .subtitle {
-            color: #666;
-            font-size: 1rem;
-            font-weight: 300;
+        .chat-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background-color: var(--bg-color);
+        }
+
+        .message {
+            margin-bottom: 16px;
+            padding: 12px 16px;
+            border-radius: var(--border-radius);
+            max-width: 80%;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+            position: relative;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .question {
+            background-color: var(--question-bg);
+            border: 1px solid var(--question-border);
+            margin-left: auto;
+            border-bottom-right-radius: 0;
+        }
+
+        .answer {
+            background-color: var(--answer-bg);
+            border: 1px solid var(--answer-border);
+            margin-right: auto;
+            border-bottom-left-radius: 0;
+        }
+
+        .input-container {
+            padding: 15px 20px;
+            background-color: var(--card-bg);
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            align-items: flex-end;
         }
 
         .question-form {
-            margin-bottom: 25px;
+            display: flex;
+            width: 100%;
+            position: relative;
+            background-color: var(--bg-color);
+            border-radius: var(--border-radius);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
         }
 
         textarea {
-            width: 100%;
-            height: 100px;
+            flex: 1;
             padding: 15px;
+            min-height: 50px;
+            max-height: 150px;
             border: 1px solid var(--border-color);
             border-radius: var(--border-radius);
             font-family: 'Noto Sans SC', sans-serif;
             font-size: 1rem;
             resize: none;
             transition: border 0.3s, box-shadow 0.3s;
-            margin-bottom: 15px;
+            overflow-y: auto;
+            background-color: transparent;
         }
 
         textarea:focus {
@@ -98,7 +229,7 @@
             color: white;
             padding: 12px 20px;
             border: none;
-            border-radius: var(--border-radius);
+            border-radius: 0 var(--border-radius) var(--border-radius) 0;
             cursor: pointer;
             font-size: 1rem;
             font-weight: 500;
@@ -121,46 +252,6 @@
             margin-right: 8px;
         }
 
-        .chat-container {
-            margin-top: 20px;
-            border: 1px solid var(--border-color);
-            border-radius: var(--border-radius);
-            height: 450px;
-            overflow-y: auto;
-            padding: 20px;
-            background-color: var(--card-bg);
-        }
-
-        .message {
-            margin-bottom: 16px;
-            padding: 12px 16px;
-            border-radius: var(--border-radius);
-            max-width: 85%;
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-            position: relative;
-            animation: fadeIn 0.3s ease-in-out;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .question {
-            background-color: var(--question-bg);
-            border: 1px solid var(--question-border);
-            text-align: right;
-            margin-left: auto;
-            border-bottom-right-radius: 0;
-        }
-
-        .answer {
-            background-color: var(--answer-bg);
-            border: 1px solid var(--answer-border);
-            margin-right: auto;
-            border-bottom-left-radius: 0;
-        }
-
         .loading {
             text-align: center;
             padding: 20px;
@@ -173,6 +264,7 @@
 
         .dot-animation {
             display: inline-flex;
+            margin-left: 5px;
         }
 
         .dot {
@@ -198,42 +290,126 @@
         }
 
         /* 响应式设计 */
-        @media screen and (max-width: 600px) {
-            .container {
-                padding: 20px;
+        @media screen and (max-width: 900px) {
+            .sidebar {
+                width: 220px;
             }
+        }
 
+        @media screen and (max-width: 768px) {
+            .app-container {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+                height: auto;
+                max-height: 200px;
+                border-right: none;
+                border-bottom: 1px solid var(--border-color);
+            }
+            
+            .main-content {
+                height: calc(100vh - 200px);
+            }
+            
+            .user-profile, .upload-button, .history-list {
+                margin-bottom: 10px;
+            }
+            
+            .sidebar-title {
+                font-size: 1.2rem;
+                margin-bottom: 5px;
+            }
+            
             h1 {
-                font-size: 1.8rem;
+                font-size: 1.5rem;
             }
+        }
 
+        @media screen and (max-width: 480px) {
             .message {
                 max-width: 90%;
+            }
+            
+            .input-container {
+                padding: 10px;
+            }
+            
+            textarea {
+                padding: 10px;
+            }
+            
+            button {
+                padding: 10px;
+            }
+            
+            .button-icon {
+                margin-right: 0;
+            }
+            
+            button span:not(.button-icon) {
+                display: none;
             }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>中医推拿推荐系统</h1>
-        </header>
-        
-        <div class="question-form">
-            <textarea id="questionInput" placeholder="请输入您的问题..." autofocus></textarea>
-            <button id="askButton" onclick="askQuestion()">
-                <span class="button-icon">
+    <div class="app-container">
+        <!-- 左侧侧边栏 -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <!-- 左侧标题已移除 -->
+            </div>
+            
+            <!-- 用户信息 -->
+            <div class="user-profile">
+                <div class="user-avatar">A</div>
+                <div class="user-name">admin</div>
+            </div>
+            
+            <!-- 上传按钮 -->
+            <button class="upload-button">
+                <span class="upload-icon">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <line x1="22" y1="2" x2="11" y2="13"></line>
-                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="17 8 12 3 7 8"></polyline>
+                        <line x1="12" y1="3" x2="12" y2="15"></line>
                     </svg>
                 </span>
-                提交问题
+                上传知识库
             </button>
+            
+            <!-- 侧边栏底部空间 -->
+            <div style="flex: 1;"></div>
         </div>
         
-        <div class="chat-container" id="chatContainer">
-            <!-- 对话内容将动态添加在这里 -->
+        <!-- 右侧主内容区 -->
+        <div class="main-content">
+            <header>
+                <h1>中医推拿推荐系统</h1>
+            </header>
+            
+            <!-- 聊天内容区域 -->
+            <div class="chat-container" id="chatContainer">
+                <!-- 对话内容将动态添加在这里 -->
+            </div>
+            
+            <!-- 底部输入区域 -->
+            <div class="input-container">
+                <div class="question-form">
+                    <textarea id="questionInput" placeholder="请输入您的问题..." autofocus></textarea>
+                    <button id="askButton" onclick="askQuestion()">
+                        <span class="button-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="22" y1="2" x2="11" y2="13"></line>
+                                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                            </svg>
+                        </span>
+                        <span>发送</span>
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -255,7 +431,6 @@
                     <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"></path>
                     <path d="M12 6v6l4 2"></path>
                 </svg>
-                处理中...
             `;
             
             // 显示问题
@@ -283,11 +458,13 @@
                 // 恢复按钮
                 askButton.disabled = false;
                 askButton.innerHTML = `
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="button-icon">
-                        <line x1="22" y1="2" x2="11" y2="13"></line>
-                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-                    </svg>
-                    提交问题
+                    <span class="button-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="22" y1="2" x2="11" y2="13"></line>
+                            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                        </svg>
+                    </span>
+                    <span>发送</span>
                 `;
                 
                 if (data.success) {
@@ -305,11 +482,13 @@
                 // 恢复按钮
                 askButton.disabled = false;
                 askButton.innerHTML = `
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="button-icon">
-                        <line x1="22" y1="2" x2="11" y2="13"></line>
-                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-                    </svg>
-                    提交问题
+                    <span class="button-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="22" y1="2" x2="11" y2="13"></line>
+                            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                        </svg>
+                    </span>
+                    <span>发送</span>
                 `;
                 
                 // 显示错误
@@ -365,12 +544,21 @@
             }
         }
         
+        // 历史记录功能已移除
+        
         // 按Enter键提交问题
         document.getElementById('questionInput').addEventListener('keydown', function(e) {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 askQuestion();
             }
+        });
+        
+        // 自适应textarea高度
+        const textarea = document.getElementById('questionInput');
+        textarea.addEventListener('input', function() {
+            textarea.style.height = 'auto';
+            textarea.style.height = (textarea.scrollHeight) + 'px';
         });
     </script>
 </body>
