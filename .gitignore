@@ -1,9 +1,10 @@
 chroma.log
 output/
-chromadb
+chromadb/
 input/
 api_key.txt
 MiniCPM-Embedding-Light
 structllm/__pycache__
 SentenceBERT
 users.db
+uploadfile/

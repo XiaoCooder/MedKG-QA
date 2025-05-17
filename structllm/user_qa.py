@@ -69,16 +69,22 @@ class user_qa:
             str: 回答
         """
         try:
-
-            print("into cot")
-            # 使用与ask_question相同的方法获取答案
-            answers, used_triples = sllm.cot.cot(self.args, question, self.corpus, self.path)
+            print("开始处理问题...")
             
-
+            # 使用asyncio来运行异步函数
+            # import asyncio
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            # 与ask_question相同的方式调用异步函数
+            result = loop.run_until_complete(sllm.cot.cot(self.args, question, self.corpus))
+            loop.close()
+            
+            answers, used_triples = result
+            
             # 格式化三元组为文本
             used_triples_text = ", ".join([f"[{h},{r},{t}]" for h, r, t in used_triples])
             
-            print("create QA")
+            print("问答处理完成")
             # 创建QA项
             qa_item = {
                 "Q": question,

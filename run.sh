@@ -8,7 +8,7 @@ model=deepseek-chat
 input=ceshi
 encoder_model=SentenceBERT
 batch_size=10
-p=2
+p=1
 args=$@
 
 CUDA_VISIBLE_DEVICES=$GPU python main.py \

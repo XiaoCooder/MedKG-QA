@@ -183,7 +183,7 @@ def merge_similar_relations(triples_relation_list, retriever, triples_list, thre
     if triples_list:
         for head, relation, tail in triples_list:
             merged_relation = relation_map.get(relation, relation)
-            updated_triples_list.append(head, merged_relation, tail)
+            updated_triples_list.append((head, merged_relation, tail))
 
     return merged_relations, updated_triples_list
 

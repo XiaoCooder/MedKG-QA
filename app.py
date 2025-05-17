@@ -4,10 +4,179 @@ from flask import Flask, request, render_template, jsonify, redirect, url_for, s
 import settings  # 导入共享设置模块
 import user_db   # 导入用户数据库模块
 
+import os
+import time
+import uuid
+from werkzeug.utils import secure_filename
+
+
 # 创建 Flask 应用
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY') or os.urandom(24)  # 用于session加密
 
+
+
+# 配置文件上传
+UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploadFile')
+ALLOWED_EXTENSIONS = {
+    'text': {'txt', 'pdf', 'doc', 'docx', 'csv', 'xls', 'xlsx', 'json', 'md'},
+    'image': {'jpg', 'jpeg', 'png', 'gif', 'svg', 'webp', 'bmp', 'tif', 'tiff'},
+    'video': {'mp4', 'avi', 'mov', 'wmv', 'mkv', 'webm', 'flv'},
+    'audio': {'mp3', 'wav', 'ogg', 'aac', 'flac'}
+}
+MAX_CONTENT_LENGTH = 50 * 1024 * 1024  # 50MB
+
+# 添加到 Flask 应用配置中
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['MAX_CONTENT_LENGTH'] = MAX_CONTENT_LENGTH
+
+
+
+@app.route('/upload_files', methods=['POST'])
+def upload_files():
+    """
+    处理多种格式文件上传的函数
+    支持文本、图片、视频等多种格式
+    文件存储在根目录的 uploadFile 文件夹中
+    """
+    # 检查用户是否已认证
+    if not is_authenticated():
+        return jsonify({'success': False, 'message': '请先登录'}), 401
+    
+    # 检查请求中是否有文件
+    if 'files[]' not in request.files:
+        return jsonify({'success': False, 'message': '没有文件被上传'}), 400
+    
+    # 获取所有上传的文件
+    files = request.files.getlist('files[]')
+    
+    # 如果没有选择文件，浏览器也会提交空的文件，所以需要检查
+    if not files or files[0].filename == '':
+        return jsonify({'success': False, 'message': '没有选择文件'}), 400
+    
+    # 创建上传目录结构
+    if not os.path.exists(UPLOAD_FOLDER):
+        try:
+            os.makedirs(UPLOAD_FOLDER)
+        except Exception as e:
+            return jsonify({'success': False, 'message': f'创建上传目录失败: {str(e)}'}), 500
+    
+    # 为每种文件类型创建子目录
+    for file_type in ALLOWED_EXTENSIONS.keys():
+        type_dir = os.path.join(UPLOAD_FOLDER, file_type)
+        if not os.path.exists(type_dir):
+            try:
+                os.makedirs(type_dir)
+            except Exception as e:
+                print(f"创建目录失败: {type_dir}, 错误: {str(e)}")
+    
+    # 处理结果存储
+    results = []
+    uploaded_count = 0
+    
+    # 处理每个文件
+    for file in files:
+        result = {
+            'filename': file.filename,
+            'success': False,
+            'message': '',
+            'path': ''
+        }
+        
+        try:
+            # 安全地获取文件名
+            filename = secure_filename(file.filename)
+            if not filename:
+                result['message'] = '文件名不合法'
+                results.append(result)
+                continue
+            
+            # 获取文件扩展名
+            file_ext = filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
+            
+            # 验证文件类型
+            file_type = None
+            for type_name, extensions in ALLOWED_EXTENSIONS.items():
+                if file_ext in extensions:
+                    file_type = type_name
+                    break
+            
+            if not file_type:
+                result['message'] = f'不支持的文件类型: .{file_ext}'
+                results.append(result)
+                continue
+            
+            # 创建唯一的文件名 (时间戳 + UUID + 原始文件名)
+            timestamp = int(time.time())
+            unique_id = str(uuid.uuid4().hex[:8])
+            new_filename = f"{timestamp}_{unique_id}_{filename}"
+            
+            # 确定存储路径
+            save_path = os.path.join(UPLOAD_FOLDER, file_type, new_filename)
+            relative_path = os.path.join('uploadFile', file_type, new_filename)
+            
+            # 保存文件
+            file.save(save_path)
+            
+            # 更新结果
+            result['success'] = True
+            result['message'] = '上传成功'
+            result['path'] = relative_path
+            uploaded_count += 1
+            
+        except Exception as e:
+            result['message'] = f'上传出错: {str(e)}'
+        
+        results.append(result)
+    
+    # 返回处理结果
+    return jsonify({
+        'success': uploaded_count > 0,
+        'message': f'成功上传 {uploaded_count}/{len(files)} 个文件',
+        'files': results
+    })
+
+@app.route('/get_uploaded_files', methods=['GET'])
+def get_uploaded_files():
+    """获取已上传文件列表"""
+    if not is_authenticated():
+        return jsonify({'success': False, 'message': '请先登录'}), 401
+    
+    file_type = request.args.get('type', None)  # 可选参数，按类型筛选
+    
+    if not os.path.exists(UPLOAD_FOLDER):
+        return jsonify({'success': True, 'files': []})
+    
+    files_list = []
+    
+    # 如果指定了类型，只查找该类型目录
+    if file_type and file_type in ALLOWED_EXTENSIONS:
+        type_dir = os.path.join(UPLOAD_FOLDER, file_type)
+        if os.path.exists(type_dir):
+            for filename in os.listdir(type_dir):
+                file_path = os.path.join('uploadFile', file_type, filename)
+                files_list.append({
+                    'name': filename,
+                    'type': file_type,
+                    'path': file_path
+                })
+    else:
+        # 否则查找所有类型目录
+        for type_name in ALLOWED_EXTENSIONS.keys():
+            type_dir = os.path.join(UPLOAD_FOLDER, type_name)
+            if os.path.exists(type_dir):
+                for filename in os.listdir(type_dir):
+                    file_path = os.path.join('uploadFile', type_name, filename)
+                    files_list.append({
+                        'name': filename,
+                        'type': type_name,
+                        'path': file_path
+                    })
+    
+    return jsonify({'success': True, 'files': files_list})
+
+
+    
 # 检查用户是否已认证的函数
 def is_authenticated():
     return session.get('authenticated', False)
