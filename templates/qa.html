@@ -1,9 +1,10 @@
+
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>中医推拿推荐系统</title>
+    <title>知识图谱问答系统</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
@@ -11,6 +12,12 @@
         :root {
             --primary-color: #4361ee;
             --primary-hover: #3a56d4;
+            --eeg-color: #2e7d32;
+            --eeg-hover: #1b5e20;
+            --image-color: #f57c00;
+            --image-hover: #e65100;
+            --ehr-color: #c2185b;
+            --ehr-hover: #880e4f;
             --bg-color: #f8f9fa;
             --card-bg: #ffffff;
             --text-color: #333333;
@@ -100,10 +107,24 @@
             font-weight: 500;
         }
 
+        .upload-section {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .section-title {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #666;
+            margin-bottom: 5px;
+            margin-top: 5px;
+        }
+
         .upload-button {
             background-color: var(--card-bg);
-            color: var(--primary-color);
-            border: 1px solid var(--primary-color);
+            border: 1px solid;
             padding: 10px 15px;
             border-radius: var(--border-radius);
             cursor: pointer;
@@ -112,20 +133,50 @@
             transition: all 0.3s;
             display: flex;
             align-items: center;
-            justify-content: center;
-            margin-bottom: 20px;
+            justify-content: flex-start;
         }
 
-        .upload-button:hover {
-            background-color: var(--primary-color);
+        .btn-eeg {
+            color: var(--eeg-color);
+            border-color: var(--eeg-color);
+        }
+
+        .btn-eeg:hover {
+            background-color: var(--eeg-color);
+            color: white;
+        }
+
+        .btn-image {
+            color: var(--image-color);
+            border-color: var(--image-color);
+        }
+
+        .btn-image:hover {
+            background-color: var(--image-color);
+            color: white;
+        }
+
+        .btn-ehr {
+            color: var(--ehr-color);
+            border-color: var(--ehr-color);
+        }
+
+        .btn-ehr:hover {
+            background-color: var(--ehr-color);
             color: white;
         }
 
         .upload-icon {
             margin-right: 8px;
+            flex-shrink: 0;
         }
 
-        /* 历史记录相关样式已移除 */
+        .file-types {
+            font-size: 0.7rem;
+            margin-top: 3px;
+            color: #777;
+            line-height: 1.4;
+        }
 
         /* 主内容区域样式 */
         .main-content {
@@ -314,13 +365,24 @@
         
         .modal-header {
             padding: 15px 20px;
-            background-color: var(--primary-color);
             color: white;
             border-top-left-radius: var(--border-radius);
             border-top-right-radius: var(--border-radius);
             display: flex;
             justify-content: space-between;
             align-items: center;
+        }
+
+        .modal-header-eeg {
+            background-color: var(--eeg-color);
+        }
+
+        .modal-header-image {
+            background-color: var(--image-color);
+        }
+
+        .modal-header-ehr {
+            background-color: var(--ehr-color);
         }
         
         .modal-header h2 {
@@ -391,6 +453,18 @@
             border-radius: var(--border-radius);
             cursor: pointer;
         }
+
+        .fake-btn-eeg {
+            background-color: var(--eeg-color);
+        }
+
+        .fake-btn-image {
+            background-color: var(--image-color);
+        }
+
+        .fake-btn-ehr {
+            background-color: var(--ehr-color);
+        }
         
         .file-input {
             position: absolute;
@@ -454,14 +528,33 @@
             transition: all 0.2s ease;
         }
         
-        .upload-actions button:first-child {
-            background-color: var(--primary-color);
+        .upload-actions .upload-btn {
             color: white;
             border: none;
         }
+
+        .upload-btn-eeg {
+            background-color: var(--eeg-color);
+        }
         
-        .upload-actions button:first-child:hover {
-            background-color: var(--primary-hover);
+        .upload-btn-eeg:hover {
+            background-color: var(--eeg-hover);
+        }
+
+        .upload-btn-image {
+            background-color: var(--image-color);
+        }
+        
+        .upload-btn-image:hover {
+            background-color: var(--image-hover);
+        }
+
+        .upload-btn-ehr {
+            background-color: var(--ehr-color);
+        }
+        
+        .upload-btn-ehr:hover {
+            background-color: var(--ehr-hover);
         }
         
         .upload-actions button:first-child:disabled {
@@ -469,13 +562,13 @@
             cursor: not-allowed;
         }
         
-        .upload-actions button:last-child {
+        .upload-actions .cancel-btn {
             background-color: #f8f9fa;
             border: 1px solid #dee2e6;
             color: #555;
         }
         
-        .upload-actions button:last-child:hover {
+        .upload-actions .cancel-btn:hover {
             background-color: #e9ecef;
         }
         
@@ -487,11 +580,22 @@
         
         .progress-bar {
             height: 10px;
-            background-color: var(--primary-color);
             border-radius: 5px;
             margin-bottom: 5px;
             width: 0%;
             transition: width 0.2s ease;
+        }
+
+        .progress-bar-eeg {
+            background-color: var(--eeg-color);
+        }
+
+        .progress-bar-image {
+            background-color: var(--image-color);
+        }
+
+        .progress-bar-ehr {
+            background-color: var(--ehr-color);
         }
         
         .progress-status {
@@ -537,16 +641,16 @@
             .sidebar {
                 width: 100%;
                 height: auto;
-                max-height: 200px;
+                max-height: 300px;
                 border-right: none;
                 border-bottom: 1px solid var(--border-color);
             }
             
             .main-content {
-                height: calc(100vh - 200px);
+                height: calc(100vh - 300px);
             }
             
-            .user-profile, .upload-button, .history-list {
+            .user-profile, .upload-section, .history-list {
                 margin-bottom: 10px;
             }
             
@@ -601,17 +705,62 @@
                 <div class="user-name">admin</div>
             </div>
             
-            <!-- 上传按钮 -->
-            <button id="uploadButton" class="upload-button">
-                <span class="upload-icon">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                        <polyline points="17 8 12 3 7 8"></polyline>
-                        <line x1="12" y1="3" x2="12" y2="15"></line>
-                    </svg>
-                </span>
-                上传知识库
-            </button>
+            <!-- 上传按钮区域 -->
+            <div class="upload-section">
+                <div class="section-title">数据上传</div>
+                
+                <!-- 肌电电信号上传按钮 -->
+                <button id="uploadEEGButton" class="upload-button btn-eeg">
+                    <span class="upload-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M2 12h6"></path>
+                            <path d="M8 12h2"></path>
+                            <path d="M16 12h.01"></path>
+                            <path d="M14 12h.01"></path>
+                            <path d="M20 12h2"></path>
+                            <path d="M5 8v4"></path>
+                            <path d="M19 8v4"></path>
+                            <path d="M3 3l18 18"></path>
+                        </svg>
+                    </span>
+                    <div>
+                        <div>上传肌电电信号</div>
+                        <div class="file-types">.edf, .gdf, .mat, .csv, .txt</div>
+                    </div>
+                </button>
+                
+                <!-- 图像数据上传按钮 -->
+                <button id="uploadImageButton" class="upload-button btn-image">
+                    <span class="upload-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                            <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                            <polyline points="21 15 16 10 5 21"></polyline>
+                        </svg>
+                    </span>
+                    <div>
+                        <div>上传图像数据</div>
+                        <div class="file-types">.jpg, .jpeg, .png, .gif, .bmp, .tiff, .webp</div>
+                    </div>
+                </button>
+                
+                <!-- 电子病历上传按钮 -->
+                <button id="uploadEHRButton" class="upload-button btn-ehr">
+                    <span class="upload-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                            <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+                            <path d="M9 14h6"></path>
+                            <path d="M9 18h6"></path>
+                            <path d="M12 10h.01"></path>
+                        </svg>
+                    </span>
+                    <div>
+                        <div>上传电子病历</div>
+                        <div class="file-types">.hl7, .fhir, .json, .xml, .cda, .dcm, .pdf, .docx</div>
+                    </div>
+                </button>
+            </div>
             
             <!-- 侧边栏底部空间 -->
             <div style="flex: 1;"></div>
@@ -620,7 +769,7 @@
         <!-- 右侧主内容区 -->
         <div class="main-content">
             <header>
-                <h1>中医推拿推荐系统</h1>
+                <h1>知识图谱问答系统</h1>
             </header>
             
             <!-- 聊天内容区域 -->
@@ -646,45 +795,131 @@
         </div>
     </div>
 
-    <!-- 文件上传模态框 -->
-    <div id="uploadModal" class="modal">
+    <!-- 肌电电信号上传模态框 -->
+    <div id="uploadEEGModal" class="modal">
         <div class="modal-content">
-            <div class="modal-header">
-                <h2>上传知识库文件</h2>
-                <span class="close">&times;</span>
+            <div class="modal-header modal-header-eeg">
+                <h2>上传肌电电信号数据</h2>
+                <span class="close" data-modal="uploadEEGModal">&times;</span>
             </div>
             <div class="modal-body">
                 <div class="upload-info">
-                    <p>支持以下文件类型:</p>
+                    <p>支持以下肌电电信号文件类型:</p>
                     <ul>
-                        <li>文本: TXT, PDF, DOC, DOCX, CSV, XLS, XLSX, JSON, MD</li>
-                        <li>图片: JPG, JPEG, PNG, GIF, SVG, WEBP, BMP</li>
-                        <li>视频: MP4, AVI, MOV, WMV, MKV, WEBM, FLV</li>
-                        <li>音频: MP3, WAV, OGG, AAC, FLAC</li>
+                        <li>EDF 格式 (.edf)</li>
+                        <li>GDF 格式 (.gdf)</li>
+                        <li>MATLAB 格式 (.mat)</li>
+                        <li>CSV 格式 (.csv)</li>
+                        <li>文本格式 (.txt)</li>
                     </ul>
                     <p>单个文件大小限制：50MB</p>
                 </div>
                 
-                <div class="file-drop-area">
+                <div class="file-drop-area" data-type="eeg">
                     <span class="file-msg">拖放文件到此处或</span>
-                    <span class="fake-btn">选择文件</span>
-                    <input class="file-input" id="fileInput" type="file" multiple>
+                    <span class="fake-btn fake-btn-eeg">选择文件</span>
+                    <input class="file-input" id="fileInputEEG" type="file" multiple accept=".edf,.gdf,.mat,.csv,.txt">
                 </div>
                 
-                <div id="fileList" class="file-list"></div>
+                <div id="fileListEEG" class="file-list"></div>
                 
                 <div class="upload-actions">
-                    <button id="startUploadBtn" disabled>上传文件</button>
-                    <button id="cancelUploadBtn">取消</button>
+                    <button id="startUploadBtnEEG" class="upload-btn upload-btn-eeg" disabled>上传文件</button>
+                    <button class="cancel-btn" data-modal="uploadEEGModal">取消</button>
                 </div>
             </div>
             
-            <div id="uploadProgress" class="progress-container">
-                <div class="progress-bar" id="progressBar" style="width: 0%"></div>
-                <div id="progressStatus" class="progress-status">0%</div>
+            <div id="uploadProgressEEG" class="progress-container">
+                <div class="progress-bar progress-bar-eeg" id="progressBarEEG" style="width: 0%"></div>
+                <div id="progressStatusEEG" class="progress-status">0%</div>
             </div>
             
-            <div id="uploadResults" class="upload-results"></div>
+            <div id="uploadResultsEEG" class="upload-results"></div>
+        </div>
+    </div>
+
+    <!-- 图像数据上传模态框 -->
+    <div id="uploadImageModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header modal-header-image">
+                <h2>上传图像数据</h2>
+                <span class="close" data-modal="uploadImageModal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="upload-info">
+                    <p>支持以下图像文件类型:</p>
+                    <ul>
+                        <li>JPEG 格式 (.jpg, .jpeg)</li>
+                        <li>PNG 格式 (.png)</li>
+                        <li>GIF 格式 (.gif)</li>
+                        <li>BMP 格式 (.bmp)</li>
+                        <li>TIFF 格式 (.tif, .tiff)</li>
+                        <li>WebP 格式 (.webp)</li>
+                    </ul>
+                    <p>单个文件大小限制：50MB</p>
+                </div>
+                
+                <div class="file-drop-area" data-type="image">
+                    <span class="file-msg">拖放文件到此处或</span>
+                    <span class="fake-btn fake-btn-image">选择文件</span>
+                    <input class="file-input" id="fileInputImage" type="file" multiple accept=".jpg,.jpeg,.png,.gif,.bmp,.tif,.tiff,.webp">
+                </div>
+                
+                <div id="fileListImage" class="file-list"></div>
+                
+                <div class="upload-actions">
+                    <button id="startUploadBtnImage" class="upload-btn upload-btn-image" disabled>上传文件</button>
+                    <button class="cancel-btn" data-modal="uploadImageModal">取消</button>
+                </div>
+            </div>
+            
+            <div id="uploadProgressImage" class="progress-container">
+                <div class="progress-bar progress-bar-image" id="progressBarImage" style="width: 0%"></div>
+                <div id="progressStatusImage" class="progress-status">0%</div>
+            </div>
+            
+            <div id="uploadResultsImage" class="upload-results"></div>
+        </div>
+    </div>
+
+    <!-- 电子病历上传模态框 -->
+    <div id="uploadEHRModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header modal-header-ehr">
+                <h2>上传电子病历数据</h2>
+                <span class="close" data-modal="uploadEHRModal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="upload-info">
+                    <p>支持以下电子病历文件类型:</p>
+                    <ul>
+                        <li>医疗标准格式 (.hl7, .fhir, .json, .xml, .cda, .dcm)</li>
+                        <li>数据库文件 (.mdf, .ldf, .emr, .ehr, .bak, .db, .sqlite)</li>
+                        <li>常见文档格式 (.pdf, .docx, .doc, .xlsx, .csv, .txt, .rtf)</li>
+                    </ul>
+                    <p>单个文件大小限制：50MB</p>
+                </div>
+                
+                <div class="file-drop-area" data-type="ehr">
+                    <span class="file-msg">拖放文件到此处或</span>
+                    <span class="fake-btn fake-btn-ehr">选择文件</span>
+                    <input class="file-input" id="fileInputEHR" type="file" multiple accept=".hl7,.fhir,.json,.xml,.cda,.dcm,.mdf,.ldf,.emr,.ehr,.bak,.db,.sqlite,.pdf,.docx,.doc,.xlsx,.csv,.txt,.rtf">
+                </div>
+                
+                <div id="fileListEHR" class="file-list"></div>
+                
+                <div class="upload-actions">
+                    <button id="startUploadBtnEHR" class="upload-btn upload-btn-ehr" disabled>上传文件</button>
+                    <button class="cancel-btn" data-modal="uploadEHRModal">取消</button>
+                </div>
+            </div>
+            
+            <div id="uploadProgressEHR" class="progress-container">
+                <div class="progress-bar progress-bar-ehr" id="progressBarEHR" style="width: 0%"></div>
+                <div id="progressStatusEHR" class="progress-status">0%</div>
+            </div>
+            
+            <div id="uploadResultsEHR" class="upload-results"></div>
         </div>
     </div>
 
@@ -819,8 +1054,6 @@
             }
         }
         
-        // 历史记录功能已移除
-        
         // 按Enter键提交问题
         document.getElementById('questionInput').addEventListener('keydown', function(e) {
             if (e.key === 'Enter' && !e.shiftKey) {
@@ -838,56 +1071,142 @@
 
         // 文件上传相关功能
         document.addEventListener('DOMContentLoaded', function() {
-            const uploadButton = document.getElementById('uploadButton');
-            const uploadModal = document.getElementById('uploadModal');
-            const closeButton = document.querySelector('.close');
-            const cancelBtn = document.getElementById('cancelUploadBtn');
-            const fileInput = document.getElementById('fileInput');
-            const fileDropArea = document.querySelector('.file-drop-area');
-            const fileList = document.getElementById('fileList');
-            const startUploadBtn = document.getElementById('startUploadBtn');
-            const progressContainer = document.getElementById('uploadProgress');
-            const progressBar = document.getElementById('progressBar');
-            const progressStatus = document.getElementById('progressStatus');
-            const uploadResults = document.getElementById('uploadResults');
+            // 所有上传按钮
+            const uploadButtons = {
+                'eeg': document.getElementById('uploadEEGButton'),
+                'image': document.getElementById('uploadImageButton'),
+                'ehr': document.getElementById('uploadEHRButton')
+            };
             
-            let selectedFiles = [];
+            // 所有模态框
+            const modals = {
+                'eeg': document.getElementById('uploadEEGModal'),
+                'image': document.getElementById('uploadImageModal'),
+                'ehr': document.getElementById('uploadEHRModal')
+            };
+            
+            // 所有关闭按钮
+            const closeButtons = document.querySelectorAll('.close');
+            
+            // 所有取消按钮
+            const cancelButtons = document.querySelectorAll('.cancel-btn');
+            
+            // 所有文件输入框
+            const fileInputs = {
+                'eeg': document.getElementById('fileInputEEG'),
+                'image': document.getElementById('fileInputImage'),
+                'ehr': document.getElementById('fileInputEHR')
+            };
+            
+            // 所有文件拖放区域
+            const fileDropAreas = document.querySelectorAll('.file-drop-area');
+            
+            // 所有文件列表
+            const fileLists = {
+                'eeg': document.getElementById('fileListEEG'),
+                'image': document.getElementById('fileListImage'),
+                'ehr': document.getElementById('fileListEHR')
+            };
+            
+            // 所有上传按钮
+            const startUploadBtns = {
+                'eeg': document.getElementById('startUploadBtnEEG'),
+                'image': document.getElementById('startUploadBtnImage'),
+                'ehr': document.getElementById('startUploadBtnEHR')
+            };
+            
+            // 所有进度容器
+            const progressContainers = {
+                'eeg': document.getElementById('uploadProgressEEG'),
+                'image': document.getElementById('uploadProgressImage'),
+                'ehr': document.getElementById('uploadProgressEHR')
+            };
+            
+            // 所有进度条
+            const progressBars = {
+                'eeg': document.getElementById('progressBarEEG'),
+                'image': document.getElementById('progressBarImage'),
+                'ehr': document.getElementById('progressBarEHR')
+            };
+            
+            // 所有进度状态
+            const progressStatuses = {
+                'eeg': document.getElementById('progressStatusEEG'),
+                'image': document.getElementById('progressStatusImage'),
+                'ehr': document.getElementById('progressStatusEHR')
+            };
+            
+            // 所有上传结果
+            const uploadResults = {
+                'eeg': document.getElementById('uploadResultsEEG'),
+                'image': document.getElementById('uploadResultsImage'),
+                'ehr': document.getElementById('uploadResultsEHR')
+            };
+            
+            // 存储选择的文件
+            let selectedFiles = {
+                'eeg': [],
+                'image': [],
+                'ehr': []
+            };
             
             // 打开模态框
-            uploadButton.addEventListener('click', function() {
-                uploadModal.style.display = 'block';
-                resetUploadForm();
+            Object.keys(uploadButtons).forEach(type => {
+                uploadButtons[type].addEventListener('click', function() {
+                    modals[type].style.display = 'block';
+                    resetUploadForm(type);
+                });
             });
             
             // 关闭模态框
-            function closeModal() {
-                uploadModal.style.display = 'none';
+            function closeModal(modalId) {
+                const modal = document.getElementById(modalId);
+                if (modal) {
+                    modal.style.display = 'none';
+                }
             }
             
-            closeButton.addEventListener('click', closeModal);
-            cancelBtn.addEventListener('click', closeModal);
+            // 关闭按钮点击事件
+            closeButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const modalId = this.getAttribute('data-modal');
+                    closeModal(modalId);
+                });
+            });
+            
+            // 取消按钮点击事件
+            cancelButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const modalId = this.getAttribute('data-modal');
+                    closeModal(modalId);
+                });
+            });
             
             // 点击模态框外部关闭
             window.addEventListener('click', function(e) {
-                if (e.target == uploadModal) {
-                    closeModal();
-                }
+                Object.values(modals).forEach(modal => {
+                    if (e.target == modal) {
+                        modal.style.display = 'none';
+                    }
+                });
             });
             
             // 重置上传表单
-            function resetUploadForm() {
-                fileList.innerHTML = '';
-                selectedFiles = [];
-                startUploadBtn.disabled = true;
-                progressContainer.style.display = 'none';
-                uploadResults.style.display = 'none';
-                progressBar.style.width = '0%';
-                progressStatus.textContent = '0%';
+            function resetUploadForm(type) {
+                fileLists[type].innerHTML = '';
+                selectedFiles[type] = [];
+                startUploadBtns[type].disabled = true;
+                progressContainers[type].style.display = 'none';
+                uploadResults[type].style.display = 'none';
+                progressBars[type].style.width = '0%';
+                progressStatuses[type].textContent = '0%';
             }
             
             // 拖放功能
             ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-                fileDropArea.addEventListener(eventName, preventDefaults, false);
+                fileDropAreas.forEach(area => {
+                    area.addEventListener(eventName, preventDefaults, false);
+                });
             });
             
             function preventDefaults(e) {
@@ -896,54 +1215,59 @@
             }
             
             ['dragenter', 'dragover'].forEach(eventName => {
-                fileDropArea.addEventListener(eventName, highlight, false);
+                fileDropAreas.forEach(area => {
+                    area.addEventListener(eventName, function() {
+                        this.classList.add('highlight');
+                    }, false);
+                });
             });
             
             ['dragleave', 'drop'].forEach(eventName => {
-                fileDropArea.addEventListener(eventName, unhighlight, false);
+                fileDropAreas.forEach(area => {
+                    area.addEventListener(eventName, function() {
+                        this.classList.remove('highlight');
+                    }, false);
+                });
             });
             
-            function highlight() {
-                fileDropArea.classList.add('highlight');
-            }
-            
-            function unhighlight() {
-                fileDropArea.classList.remove('highlight');
-            }
-            
             // 处理文件拖放
-            fileDropArea.addEventListener('drop', function(e) {
-                const files = e.dataTransfer.files;
-                handleFiles(files);
+            fileDropAreas.forEach(area => {
+                area.addEventListener('drop', function(e) {
+                    const type = this.getAttribute('data-type');
+                    const files = e.dataTransfer.files;
+                    handleFiles(type, files);
+                });
             });
             
             // 处理文件选择
-            fileInput.addEventListener('change', function() {
-                handleFiles(this.files);
+            Object.keys(fileInputs).forEach(type => {
+                fileInputs[type].addEventListener('change', function() {
+                    handleFiles(type, this.files);
+                });
             });
             
             // 处理选择的文件
-            function handleFiles(files) {
+            function handleFiles(type, files) {
                 if (files.length === 0) return;
                 
                 // 将 FileList 转换为数组
                 const filesArray = Array.from(files);
                 
                 // 合并新选择的文件和已有文件
-                selectedFiles = [...selectedFiles, ...filesArray];
+                selectedFiles[type] = [...selectedFiles[type], ...filesArray];
                 
                 // 更新文件列表显示
-                updateFileList();
+                updateFileList(type);
                 
                 // 启用上传按钮
-                startUploadBtn.disabled = selectedFiles.length === 0;
+                startUploadBtns[type].disabled = selectedFiles[type].length === 0;
             }
             
             // 更新文件列表显示
-            function updateFileList() {
-                fileList.innerHTML = '';
+            function updateFileList(type) {
+                fileLists[type].innerHTML = '';
                 
-                selectedFiles.forEach((file, index) => {
+                selectedFiles[type].forEach((file, index) => {
                     const fileItem = document.createElement('div');
                     fileItem.className = 'file-item';
                     
@@ -960,15 +1284,15 @@
                     removeBtn.textContent = '×';
                     removeBtn.addEventListener('click', function() {
                         // 移除文件
-                        selectedFiles.splice(index, 1);
-                        updateFileList();
-                        startUploadBtn.disabled = selectedFiles.length === 0;
+                        selectedFiles[type].splice(index, 1);
+                        updateFileList(type);
+                        startUploadBtns[type].disabled = selectedFiles[type].length === 0;
                     });
                     
                     fileItem.appendChild(fileName);
                     fileItem.appendChild(fileSize);
                     fileItem.appendChild(removeBtn);
-                    fileList.appendChild(fileItem);
+                    fileLists[type].appendChild(fileItem);
                 });
             }
             
@@ -981,72 +1305,77 @@
             }
             
             // 上传文件
-            startUploadBtn.addEventListener('click', function() {
-                if (selectedFiles.length === 0) return;
-                
-                // 禁用上传按钮
-                startUploadBtn.disabled = true;
-                
-                // 显示进度条
-                progressContainer.style.display = 'block';
-                uploadResults.style.display = 'none';
-                uploadResults.innerHTML = '';
-                
-                // 创建 FormData 对象
-                const formData = new FormData();
-                
-                // 添加文件
-                selectedFiles.forEach(file => {
-                    formData.append('files[]', file);
-                });
-                
-                // 创建 AJAX 请求
-                const xhr = new XMLHttpRequest();
-                
-                // 监听上传进度
-                xhr.upload.addEventListener('progress', function(e) {
-                    if (e.lengthComputable) {
-                        const percent = Math.round((e.loaded / e.total) * 100);
-                        progressBar.style.width = percent + '%';
-                        progressStatus.textContent = percent + '%';
-                    }
-                });
-                
-                // 处理请求完成
-                xhr.addEventListener('load', function() {
-                    if (xhr.status >= 200 && xhr.status < 300) {
-                        // 上传成功
-                        const response = JSON.parse(xhr.responseText);
-                        displayResults(response);
-                    } else {
-                        // 上传失败
-                        displayError('上传失败: 服务器错误');
-                    }
+            Object.keys(startUploadBtns).forEach(type => {
+                startUploadBtns[type].addEventListener('click', function() {
+                    if (selectedFiles[type].length === 0) return;
                     
-                    // 重新启用上传按钮
-                    startUploadBtn.disabled = false;
+                    // 禁用上传按钮
+                    startUploadBtns[type].disabled = true;
+                    
+                    // 显示进度条
+                    progressContainers[type].style.display = 'block';
+                    uploadResults[type].style.display = 'none';
+                    uploadResults[type].innerHTML = '';
+                    
+                    // 创建 FormData 对象
+                    const formData = new FormData();
+                    
+                    // 添加文件类型标识
+                    formData.append('file_type', type);
+                    
+                    // 添加文件
+                    selectedFiles[type].forEach(file => {
+                        formData.append('files[]', file);
+                    });
+                    
+                    // 创建 AJAX 请求
+                    const xhr = new XMLHttpRequest();
+                    
+                    // 监听上传进度
+                    xhr.upload.addEventListener('progress', function(e) {
+                        if (e.lengthComputable) {
+                            const percent = Math.round((e.loaded / e.total) * 100);
+                            progressBars[type].style.width = percent + '%';
+                            progressStatuses[type].textContent = percent + '%';
+                        }
+                    });
+                    
+                    // 处理请求完成
+                    xhr.addEventListener('load', function() {
+                        if (xhr.status >= 200 && xhr.status < 300) {
+                            // 上传成功
+                            const response = JSON.parse(xhr.responseText);
+                            displayResults(type, response);
+                        } else {
+                            // 上传失败
+                            displayError(type, '上传失败: 服务器错误');
+                        }
+                        
+                        // 重新启用上传按钮
+                        startUploadBtns[type].disabled = false;
+                    });
+                    
+                    // 处理请求错误
+                    xhr.addEventListener('error', function() {
+                        displayError(type, '上传失败: 网络错误');
+                        startUploadBtns[type].disabled = false;
+                    });
+                    
+                    // 发送请求
+                    xhr.open('POST', '/upload_files');
+                    xhr.send(formData);
                 });
-                
-                // 处理请求错误
-                xhr.addEventListener('error', function() {
-                    displayError('上传失败: 网络错误');
-                    startUploadBtn.disabled = false;
-                });
-                
-                // 发送请求
-                xhr.open('POST', '/upload_files');
-                xhr.send(formData);
             });
             
             // 显示上传结果
-            function displayResults(response) {
-                uploadResults.style.display = 'block';
+            function displayResults(type, response) {
+                uploadResults[type].style.display = 'block';
                 
                 // 创建总结信息
                 const summary = document.createElement('div');
                 summary.className = 'result-item ' + (response.success ? 'result-success' : 'result-error');
                 summary.textContent = response.message;
-                uploadResults.appendChild(summary);
+                uploadResults[type].appendChild(summary);
                 
                 // 显示每个文件的结果
                 if (response.files && response.files.length > 0) {
@@ -1054,26 +1383,26 @@
                         const resultItem = document.createElement('div');
                         resultItem.className = 'result-item ' + (file.success ? 'result-success' : 'result-error');
                         resultItem.textContent = `${file.filename}: ${file.message}`;
-                        uploadResults.appendChild(resultItem);
+                        uploadResults[type].appendChild(resultItem);
                     });
                 }
                 
                 // 成功上传后清空文件列表
                 if (response.success) {
-                    selectedFiles = [];
-                    fileList.innerHTML = '';
+                    selectedFiles[type] = [];
+                    fileLists[type].innerHTML = '';
                 }
             }
             
             // 显示错误信息
-            function displayError(message) {
-                uploadResults.style.display = 'block';
-                uploadResults.innerHTML = '';
+            function displayError(type, message) {
+                uploadResults[type].style.display = 'block';
+                uploadResults[type].innerHTML = '';
                 
                 const errorItem = document.createElement('div');
                 errorItem.className = 'result-item result-error';
                 errorItem.textContent = message;
-                uploadResults.appendChild(errorItem);
+                uploadResults[type].appendChild(errorItem);
             }
         });
     </script>

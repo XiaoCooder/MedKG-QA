@@ -19,10 +19,12 @@ app.secret_key = os.environ.get('SECRET_KEY') or os.urandom(24)  # 用于session
 # 配置文件上传
 UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploadFile')
 ALLOWED_EXTENSIONS = {
-    'text': {'txt', 'pdf', 'doc', 'docx', 'csv', 'xls', 'xlsx', 'json', 'md'},
+    'text': {'txt', 'pdf', 'doc', 'docx', 'csv', 'xls', 'xlsx', 'json', 'md', 'rtf'},
     'image': {'jpg', 'jpeg', 'png', 'gif', 'svg', 'webp', 'bmp', 'tif', 'tiff'},
     'video': {'mp4', 'avi', 'mov', 'wmv', 'mkv', 'webm', 'flv'},
-    'audio': {'mp3', 'wav', 'ogg', 'aac', 'flac'}
+    'audio': {'mp3', 'wav', 'ogg', 'aac', 'flac'},
+    'eeg': {'edf', 'gdf', 'mat', 'csv', 'txt'}, # 肌电电信号格式
+    'ehr': {'hl7', 'fhir', 'json', 'xml', 'cda', 'dcm', 'mdf', 'ldf', 'emr', 'ehr', 'bak', 'db', 'sqlite', 'pdf', 'docx', 'doc', 'xlsx', 'csv', 'txt', 'rtf'} # 电子病历格式
 }
 MAX_CONTENT_LENGTH = 50 * 1024 * 1024  # 50MB
 
@@ -31,44 +33,32 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = MAX_CONTENT_LENGTH
 
 
-
-@app.route('/upload_files', methods=['POST'])
-def upload_files():
+# 通用文件上传函数
+def handle_file_upload(files, file_type):
     """
-    处理多种格式文件上传的函数
-    支持文本、图片、视频等多种格式
-    文件存储在根目录的 uploadFile 文件夹中
+    处理文件上传的通用函数
+    
+    参数:
+        files: 上传的文件列表
+        file_type: 文件类型 ('eeg', 'image', 'ehr')
+    
+    返回:
+        dict: 包含上传结果的字典
     """
-    # 检查用户是否已认证
-    if not is_authenticated():
-        return jsonify({'success': False, 'message': '请先登录'}), 401
-    
-    # 检查请求中是否有文件
-    if 'files[]' not in request.files:
-        return jsonify({'success': False, 'message': '没有文件被上传'}), 400
-    
-    # 获取所有上传的文件
-    files = request.files.getlist('files[]')
-    
-    # 如果没有选择文件，浏览器也会提交空的文件，所以需要检查
-    if not files or files[0].filename == '':
-        return jsonify({'success': False, 'message': '没有选择文件'}), 400
-    
     # 创建上传目录结构
     if not os.path.exists(UPLOAD_FOLDER):
         try:
             os.makedirs(UPLOAD_FOLDER)
         except Exception as e:
-            return jsonify({'success': False, 'message': f'创建上传目录失败: {str(e)}'}), 500
+            return {'success': False, 'message': f'创建上传目录失败: {str(e)}', 'files': []}, 500
     
-    # 为每种文件类型创建子目录
-    for file_type in ALLOWED_EXTENSIONS.keys():
-        type_dir = os.path.join(UPLOAD_FOLDER, file_type)
-        if not os.path.exists(type_dir):
-            try:
-                os.makedirs(type_dir)
-            except Exception as e:
-                print(f"创建目录失败: {type_dir}, 错误: {str(e)}")
+    # 确保文件类型目录存在
+    type_dir = os.path.join(UPLOAD_FOLDER, file_type)
+    if not os.path.exists(type_dir):
+        try:
+            os.makedirs(type_dir)
+        except Exception as e:
+            return {'success': False, 'message': f'创建类型目录失败: {str(e)}', 'files': []}, 500
     
     # 处理结果存储
     results = []
@@ -80,7 +70,8 @@ def upload_files():
             'filename': file.filename,
             'success': False,
             'message': '',
-            'path': ''
+            'path': '',
+            'type': file_type
         }
         
         try:
@@ -94,15 +85,9 @@ def upload_files():
             # 获取文件扩展名
             file_ext = filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
             
-            # 验证文件类型
-            file_type = None
-            for type_name, extensions in ALLOWED_EXTENSIONS.items():
-                if file_ext in extensions:
-                    file_type = type_name
-                    break
-            
-            if not file_type:
-                result['message'] = f'不支持的文件类型: .{file_ext}'
+            # 验证文件类型是否符合要求
+            if file_ext not in ALLOWED_EXTENSIONS.get(file_type, set()):
+                result['message'] = f'不支持的文件类型: .{file_ext}，只允许上传{file_type}类型文件'
                 results.append(result)
                 continue
             
@@ -130,15 +115,88 @@ def upload_files():
         results.append(result)
     
     # 返回处理结果
-    return jsonify({
+    return {
         'success': uploaded_count > 0,
         'message': f'成功上传 {uploaded_count}/{len(files)} 个文件',
         'files': results
-    })
+    }
+
+
+@app.route('/upload_eeg_files', methods=['POST'])
+def upload_eeg_files():
+    """处理肌电信号文件上传"""
+    # 检查用户是否已认证
+    if not is_authenticated():
+        return jsonify({'success': False, 'message': '请先登录'}), 401
+    
+    # 检查请求中是否有文件
+    if 'files[]' not in request.files:
+        return jsonify({'success': False, 'message': '没有文件被上传'}), 400
+    
+    # 获取所有上传的文件
+    files = request.files.getlist('files[]')
+    
+    # 如果没有选择文件，浏览器也会提交空的文件，所以需要检查
+    if not files or files[0].filename == '':
+        return jsonify({'success': False, 'message': '没有选择文件'}), 400
+    
+    # 使用通用函数上传肌电信号文件
+    result = handle_file_upload(files, 'eeg')
+    
+    return jsonify(result)
+
+
+@app.route('/upload_image_files', methods=['POST'])
+def upload_image_files():
+    """处理图像文件上传"""
+    # 检查用户是否已认证
+    if not is_authenticated():
+        return jsonify({'success': False, 'message': '请先登录'}), 401
+    
+    # 检查请求中是否有文件
+    if 'files[]' not in request.files:
+        return jsonify({'success': False, 'message': '没有文件被上传'}), 400
+    
+    # 获取所有上传的文件
+    files = request.files.getlist('files[]')
+    
+    # 如果没有选择文件，浏览器也会提交空的文件，所以需要检查
+    if not files or files[0].filename == '':
+        return jsonify({'success': False, 'message': '没有选择文件'}), 400
+    
+    # 使用通用函数上传图像文件
+    result = handle_file_upload(files, 'image')
+    
+    return jsonify(result)
+
+
+@app.route('/upload_ehr_files', methods=['POST'])
+def upload_ehr_files():
+    """处理电子病历文件上传"""
+    # 检查用户是否已认证
+    if not is_authenticated():
+        return jsonify({'success': False, 'message': '请先登录'}), 401
+    
+    # 检查请求中是否有文件
+    if 'files[]' not in request.files:
+        return jsonify({'success': False, 'message': '没有文件被上传'}), 400
+    
+    # 获取所有上传的文件
+    files = request.files.getlist('files[]')
+    
+    # 如果没有选择文件，浏览器也会提交空的文件，所以需要检查
+    if not files or files[0].filename == '':
+        return jsonify({'success': False, 'message': '没有选择文件'}), 400
+    
+    # 使用通用函数上传电子病历文件
+    result = handle_file_upload(files, 'ehr')
+    
+    return jsonify(result)
+
 
 @app.route('/get_uploaded_files', methods=['GET'])
 def get_uploaded_files():
-    """获取已上传文件列表"""
+    """获取已上传文件列表，支持按类型筛选"""
     if not is_authenticated():
         return jsonify({'success': False, 'message': '请先登录'}), 401
     
