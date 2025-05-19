@@ -86,8 +86,10 @@ def handle_file_upload(files, file_type):
             file_ext = filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
             
             # 验证文件类型是否符合要求
+            allowed_extensions = ALLOWED_EXTENSIONS.get(file_type, set())
             if file_ext not in ALLOWED_EXTENSIONS.get(file_type, set()):
-                result['message'] = f'不支持的文件类型: .{file_ext}，只允许上传{file_type}类型文件'
+                allowed_types_str = ', '.join(f'.{ext}' for ext in allowed_extensions)
+                result['message'] = f'不支持的文件类型: .{file_ext}，只允许上传 {allowed_types_str} 类型文件'
                 results.append(result)
                 continue
             
